@@ -104,6 +104,15 @@ public class TransactionServiceImpl implements TransactionService {
      * {@inheritDoc}
      */
     @Override
+    public List<Transaction> getTransactionsByDescription(String description) {
+        log.info("Retrieving transactions containing description: {}", description);
+        return transactionRepository.findByDescriptionContainingIgnoreCase(description);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public BigDecimal calculateTotalAmount() {
         log.info("Calculating total amount");
         BigDecimal total = transactionRepository.calculateTotalAmount();
@@ -117,12 +126,12 @@ public class TransactionServiceImpl implements TransactionService {
     public Map<Integer, BigDecimal> calculateMonthlyTotals(int year) {
         log.info("Calculating monthly totals for year: {}", year);
         Map<Integer, BigDecimal> monthlyTotals = new HashMap<>();
-        
+
         for (int month = 1; month <= 12; month++) {
             BigDecimal total = transactionRepository.calculateMonthlyTotal(month, year);
             monthlyTotals.put(month, total != null ? total : BigDecimal.ZERO);
         }
-        
+
         return monthlyTotals;
     }
 
@@ -133,12 +142,12 @@ public class TransactionServiceImpl implements TransactionService {
     public Map<String, BigDecimal> calculateTotalsByCategory() {
         log.info("Calculating totals by category");
         Map<String, BigDecimal> categoryTotals = new HashMap<>();
-        
+
         // Get all transactions and group by category
         List<Transaction> transactions = getAllTransactions();
         Map<String, List<Transaction>> transactionsByCategory = transactions.stream()
                 .collect(Collectors.groupingBy(transaction -> transaction.getCategory().toLowerCase()));
-        
+
         // Calculate total for each category
         transactionsByCategory.forEach((category, categoryTransactions) -> {
             BigDecimal total = categoryTransactions.stream()
@@ -146,7 +155,7 @@ public class TransactionServiceImpl implements TransactionService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             categoryTotals.put(category, total);
         });
-        
+
         return categoryTotals;
     }
 

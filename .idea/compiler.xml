@@ -7,13 +7,20 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="MonthlyExpense" />
+      </profile>
+      <profile name="Annotation profile for Monthly Expense Tracker" enabled="true">
+        <sourceOutputDir name="../generated-sources/annotations" />
+        <sourceTestOutputDir name="../generated-test-sources/test-annotations" />
+        <module name="MonthlyExpense.test" />
+        <module name="MonthlyExpense.main" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="MonthlyExpense" options="-parameters" />
+      <module name="MonthlyExpense" options="-parameters -verbose -Xlint:all,-options,-path" />
+      <module name="MonthlyExpense.main" options="-parameters -verbose -Xlint:all,-options,-path" />
+      <module name="MonthlyExpense.test" options="-parameters -verbose -Xlint:all,-options,-path" />
     </option>
   </component>
 </project>

@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Service interface for Transaction operations.
@@ -64,6 +65,14 @@ public interface TransactionService {
     List<Transaction> getTransactionsByCategory(String category);
 
     /**
+     * Get transactions containing the given description (case insensitive).
+     *
+     * @param description Description to search for
+     * @return List of transactions
+     */
+    List<Transaction> getTransactionsByDescription(String description);
+
+    /**
      * Calculate total amount of all transactions.
      *
      * @return Total amount
@@ -89,4 +98,5 @@ public interface TransactionService {
      * Delete all transactions.
      */
     void deleteAllTransactions();
+
 }

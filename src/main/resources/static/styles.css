@@ -127,3 +127,44 @@ tr:hover {
         min-width: 100%;
     }
 }
+/* Filter styles */
+.filters-container {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.filter-status .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.filter-status .badge .btn-close {
+    margin-left: 8px;
+    opacity: 0.7;
+}
+
+.filter-status .badge .btn-close:hover {
+    opacity: 1;
+}
+
+.input-group-text {
+    background-color: #f0f7ff;
+    border-color: #d1e7ff;
+    color: #0d6efd;
+}
+
+.input-group-text i {
+    font-size: 0.9rem;
+}

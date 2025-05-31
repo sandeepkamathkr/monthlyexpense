@@ -21,10 +21,10 @@ public class TransactionDTO {
 
     /**
      * Date of the transaction.
-     * Format: yyyy-MM-dd
+     * Format: "dd/MM/yyyy"
      */
     @CsvBindByName(column = "Date", required = true)
-    @CsvDate(value = "yyyy-MM-dd")
+    @CsvDate(value = "dd/MM/yyyy")
     private LocalDate date;
 
     /**

@@ -4,8 +4,9 @@ COPY pom.xml .
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-FROM openjdk:11-jre-slim
+# Use full JRE image instead of slim to include all native libraries
+FROM openjdk:11-jre
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-EXPOSE 8080
+EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "app.jar"]

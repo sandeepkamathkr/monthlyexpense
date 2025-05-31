@@ -44,7 +44,11 @@ A web application for tracking and analyzing monthly expenses. This application 
    ```
    mvn spring-boot:run
    ```
-4. Access the application at http://localhost:8080
+   or
+   ```
+   npm start
+   ```
+4. Access the application at http://localhost:8081
 
 #### Using Docker
 1. Clone the repository
@@ -55,9 +59,24 @@ A web application for tracking and analyzing monthly expenses. This application 
    ```
 4. Run the Docker container:
    ```
-   docker run -p 8080:8080 monthly-expense-tracker
+   docker run -p 8081:8081 monthly-expense-tracker
    ```
-5. Access the application at http://localhost:8080
+5. Access the application at http://localhost:8081
+
+#### Using Serve (React Only)
+If you're having trouble starting the Spring Boot application, you can run just the React frontend:
+
+1. Install dependencies:
+   ```
+   npm install
+   ```
+2. Start the React app:
+   ```
+   npm run start-react
+   ```
+3. Access the application at the URL shown in the terminal (typically http://localhost:5000)
+
+Note: When using this method, the backend API will not be available, so data loading and saving features won't work.
 
 ## CSV File Format
 
@@ -90,10 +109,20 @@ The application provides the following REST API endpoints:
 
 ## Database
 
-The application uses an H2 in-memory database by default. The database console is available at http://localhost:8080/h2-console with the following default credentials:
+The application uses an H2 in-memory database by default. The database console is available at http://localhost:8081/h2-console with the following default credentials:
 - JDBC URL: `jdbc:h2:file:./data/expense_db`
 - Username: `sa`
 - Password: `password`
+
+## Troubleshooting
+
+### DLL Errors
+If you encounter DLL errors when running the application in Docker, it's likely due to missing native libraries in the slim JRE image. The application uses H2 database which requires certain native libraries to function properly.
+
+Solution:
+- The Dockerfile has been updated to use the full JRE image (`openjdk:11-jre`) instead of the slim version (`openjdk:11-jre-slim`).
+- The full JRE image includes all necessary native libraries that H2 database needs.
+- If you still encounter issues, try running the application outside of Docker using Maven.
 
 ## License
 

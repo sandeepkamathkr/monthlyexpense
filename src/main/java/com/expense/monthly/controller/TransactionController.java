@@ -38,7 +38,7 @@ public class TransactionController {
     @PostMapping("/upload")
     public ResponseEntity<?> uploadCSVFile(@RequestParam("file") MultipartFile file) {
         log.info("Received file upload request: {}", file.getOriginalFilename());
-        
+
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("Please select a CSV file to upload.");
         }
@@ -48,12 +48,12 @@ public class TransactionController {
             List<TransactionDTO> dtos = savedTransactions.stream()
                     .map(TransactionDTO::fromEntity)
                     .collect(Collectors.toList());
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("message", "File processed successfully");
             response.put("transactions", dtos);
             response.put("count", dtos.size());
-            
+
             return ResponseEntity.ok(response);
         } catch (IOException e) {
             log.error("Failed to process CSV file", e);
@@ -67,14 +67,35 @@ public class TransactionController {
     }
 
     /**
-     * Get all transactions.
+     * Get all transactions, optionally filtered by category and/or description.
      *
-     * @return List of all transactions
+     * @param category Optional category to filter by
+     * @param description Optional description to filter by
+     * @return List of transactions
      */
     @GetMapping
-    public ResponseEntity<List<TransactionDTO>> getAllTransactions() {
-        log.info("Fetching all transactions");
-        List<Transaction> transactions = transactionService.getAllTransactions();
+    public ResponseEntity<List<TransactionDTO>> getAllTransactions(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String description) {
+        List<Transaction> transactions;
+
+        if (category != null && !category.isEmpty() && description != null && !description.isEmpty()) {
+            log.info("Fetching transactions filtered by category: {} and description containing: {}", category, description);
+            // Get transactions by category first, then filter by description
+            transactions = transactionService.getTransactionsByCategory(category).stream()
+                    .filter(t -> t.getDescription().toLowerCase().contains(description.toLowerCase()))
+                    .collect(Collectors.toList());
+        } else if (category != null && !category.isEmpty()) {
+            log.info("Fetching transactions filtered by category: {}", category);
+            transactions = transactionService.getTransactionsByCategory(category);
+        } else if (description != null && !description.isEmpty()) {
+            log.info("Fetching transactions filtered by description containing: {}", description);
+            transactions = transactionService.getTransactionsByDescription(description);
+        } else {
+            log.info("Fetching all transactions");
+            transactions = transactionService.getAllTransactions();
+        }
+
         List<TransactionDTO> dtos = transactions.stream()
                 .map(TransactionDTO::fromEntity)
                 .collect(Collectors.toList());

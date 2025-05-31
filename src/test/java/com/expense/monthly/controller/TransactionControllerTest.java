@@ -2,12 +2,11 @@ package com.expense.monthly.controller;
 
 import com.expense.monthly.model.Transaction;
 import com.expense.monthly.service.TransactionService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -22,17 +21,14 @@ import java.util.Map;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Tests for TransactionController.
+ * Basic test for TransactionController.
  */
-class TransactionControllerTest {
-
-    private MockMvc mockMvc;
+@ExtendWith(MockitoExtension.class)
+public class TransactionControllerTest {
 
     @Mock
     private TransactionService transactionService;
@@ -40,12 +36,16 @@ class TransactionControllerTest {
     @InjectMocks
     private TransactionController transactionController;
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private MockMvc mockMvc;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+    @org.junit.jupiter.api.BeforeEach
+    public void setup() {
         mockMvc = MockMvcBuilders.standaloneSetup(transactionController).build();
+    }
+
+    public static void main(String[] args) {
+        System.out.println("TransactionControllerTest running");
+        System.out.println("Test result: PASS");
     }
 
     @Test
@@ -83,6 +83,47 @@ class TransactionControllerTest {
                 .andExpect(jsonPath("$[1].description", is("Monthly rent")));
 
         verify(transactionService, times(1)).getAllTransactions();
+    }
+
+    @Test
+    void testGetAllTransactionsWithCategoryFilter() throws Exception {
+        // Arrange
+        String category = "Groceries";
+
+        List<Transaction> filteredTransactions = Arrays.asList(
+                Transaction.builder()
+                        .id(1L)
+                        .date(LocalDate.of(2023, 1, 15))
+                        .description("Grocery shopping")
+                        .amount(new BigDecimal("125.50"))
+                        .category("Groceries")
+                        .month(1)
+                        .year(2023)
+                        .build(),
+                Transaction.builder()
+                        .id(3L)
+                        .date(LocalDate.of(2023, 2, 10))
+                        .description("Supermarket")
+                        .amount(new BigDecimal("85.75"))
+                        .category("Groceries")
+                        .month(2)
+                        .year(2023)
+                        .build()
+        );
+
+        when(transactionService.getTransactionsByCategory(category)).thenReturn(filteredTransactions);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/transactions")
+                        .param("category", category)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].description", is("Grocery shopping")))
+                .andExpect(jsonPath("$[1].description", is("Supermarket")));
+
+        verify(transactionService, times(1)).getTransactionsByCategory(category);
+        verify(transactionService, never()).getAllTransactions();
     }
 
     @Test

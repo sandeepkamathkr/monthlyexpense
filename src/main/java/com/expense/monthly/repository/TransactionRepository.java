@@ -41,6 +41,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByCategoryIgnoreCase(String category);
 
     /**
+     * Find all transactions containing the given description (case insensitive).
+     *
+     * @param description Description to search for
+     * @return List of transactions
+     */
+    List<Transaction> findByDescriptionContainingIgnoreCase(String description);
+
+    /**
      * Calculate the total amount of all transactions.
      *
      * @return Total amount

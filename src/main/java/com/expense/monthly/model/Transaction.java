@@ -56,14 +56,14 @@ public class Transaction {
      * Month of the transaction (1-12).
      * This is derived from the date field but stored for easier querying.
      */
-    @Column(nullable = false)
+    @Column(name = "transaction_month", nullable = false)
     private int month;
 
     /**
      * Year of the transaction.
      * This is derived from the date field but stored for easier querying.
      */
-    @Column(nullable = false)
+    @Column(name = "transaction_year", nullable = false)
     private int year;
 
     /**
