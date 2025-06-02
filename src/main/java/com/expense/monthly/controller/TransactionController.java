@@ -185,6 +185,7 @@ public class TransactionController {
     public ResponseEntity<Map<String, String>> resetData() {
         log.info("Resetting all data");
         transactionService.deleteAllTransactions();
+        //transactionService.executeH2ResetScript();
         Map<String, String> response = new HashMap<>();
         response.put("message", "All data has been reset successfully");
         return ResponseEntity.ok(response);

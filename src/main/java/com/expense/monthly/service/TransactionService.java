@@ -99,4 +99,10 @@ public interface TransactionService {
      */
     void deleteAllTransactions();
 
+    /**
+     * Executes a script to reset the H2 database (e.g., DROP ALL OBJECTS).
+     */
+    void executeH2ResetScript(); // New method
+
+
 }

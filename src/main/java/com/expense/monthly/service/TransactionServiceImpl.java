@@ -7,6 +7,7 @@ import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     /**
      * {@inheritDoc}
@@ -168,4 +170,16 @@ public class TransactionServiceImpl implements TransactionService {
         log.info("Deleting all transactions");
         transactionRepository.deleteAll();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public void executeH2ResetScript() {
+        log.info("Executing H2 specific reset script: DROP ALL OBJECTS");
+        jdbcTemplate.execute("DROP ALL OBJECTS");
+        log.info("H2 database has been cleared. Schema recreation depends on JPA/Hibernate configuration (e.g., ddl-auto) and Spring Boot's datasource initialization.");
+    }
+
 }
