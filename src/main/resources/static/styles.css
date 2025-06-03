@@ -168,3 +168,411 @@ tr:hover {
 .input-group-text i {
     font-size: 0.9rem;
 }
+
+/* Import Bootstrap Icons */
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css");
+
+/* Card styling improvements */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
+    overflow: hidden;
+    border: none;
+}
+
+.card:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background-color: #3498db;
+    color: white;
+    padding: 15px 20px;
+    font-weight: bold;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* Category card specific styling */
+.category-card .card-header {
+    background-color: #3498db;
+    color: white;
+    padding: 15px 20px;
+    font-weight: bold;
+}
+
+.total-badge {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    background-color: #0d6efd;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.info-text {
+    color: #6c757d;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border-left: 3px solid #0d6efd;
+}
+
+.info-text i {
+    color: #0d6efd;
+    margin-right: 5px;
+}
+
+/* Table styling improvements */
+.table-container {
+    overflow-x: auto;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.table {
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    border-top: none;
+    border-bottom: 2px solid #dee2e6;
+    padding: 12px 15px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.table tbody td {
+    padding: 12px 15px;
+    vertical-align: middle;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Category table styling */
+.category-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.category-table th {
+    position: relative;
+    padding: 12px 15px;
+}
+
+.category-column {
+    width: 40%;
+}
+
+.amount-column {
+    width: 25%;
+}
+
+.percentage-column {
+    width: 35%;
+}
+
+.sort-icon {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.sortable-header:hover .sort-icon {
+    color: #007bff;
+}
+
+/* Total summary styling */
+.total-summary {
+    display: flex;
+    align-items: center;
+    background-color: #f8f9fa;
+    padding: 8px 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.total-label {
+    font-weight: 600;
+    color: #495057;
+    margin-right: 10px;
+}
+
+.total-badge {
+    font-size: 1rem;
+    padding: 8px 12px;
+}
+
+/* Category row styling */
+.category-row {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.category-row:hover, .category-row.hovered {
+    background-color: #f0f7ff;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.category-row:hover td, .category-row.hovered td {
+    font-weight: bold;
+    color: #007bff;
+}
+
+.category-row:active {
+    transform: translateY(0);
+    background-color: #e6f0ff;
+}
+
+.category-color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.category-row:hover .category-color-indicator, 
+.category-row.hovered .category-color-indicator {
+    transform: scale(1.2);
+}
+
+.category-name {
+    font-weight: 500;
+}
+
+.click-icon {
+    opacity: 0;
+    font-size: 0.8rem;
+    color: #6c757d;
+    transition: opacity 0.2s ease;
+}
+
+.category-row:hover .click-icon, .category-row.hovered .click-icon {
+    opacity: 1;
+    color: #007bff;
+}
+
+.amount-cell {
+    font-weight: 500;
+    text-align: right;
+}
+
+/* Progress bar styling */
+.percentage-cell {
+    padding-right: 15px;
+}
+
+.progress {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    background-color: #007bff;
+    transition: width 0.6s ease;
+}
+
+.category-row:hover .progress-bar, .category-row.hovered .progress-bar {
+    background-color: #0056b3;
+}
+
+.percentage-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6c757d;
+    min-width: 50px;
+    text-align: right;
+}
+
+.category-row:hover .percentage-value, .category-row.hovered .percentage-value {
+    color: #007bff;
+}
+
+/* Transaction table styling */
+.transaction-table thead th {
+    background-color: #f0f7ff;
+}
+
+.transaction-row:hover {
+    background-color: #f8f9fa;
+}
+
+.date-cell {
+    white-space: nowrap;
+    color: #495057;
+}
+
+.description-cell {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Sortable header styling */
+.sortable-header {
+    position: relative;
+    user-select: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sortable-header:hover {
+    background-color: #e9ecef;
+    color: #007bff;
+}
+
+.sortable-header i {
+    color: #007bff;
+}
+
+/* Modal styling improvements */
+.modal {
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    animation: modalFadeIn 0.3s ease;
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    color: white;
+    padding: 15px 20px;
+    background-color: #f8f9fa;
+}
+
+.modal-title {
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+}
+
+.modal-title i {
+    color: #0d6efd;
+}
+
+.transaction-count {
+    color: #6c757d;
+}
+
+.category-total {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.category-total .fw-bold {
+    color: #0d6efd;
+}
+
+.sort-instructions {
+    color: #6c757d;
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    display: inline-block;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 15px 20px;
+    background-color: #f8f9fa;
+}
+
+/* Animation for modal */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Collapsible Card Styles */
+.card-header .btn-link {
+    color: white;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.card-header .btn-link:hover {
+    transform: scale(1.2);
+}
+
+.card-header .btn-link i {
+    font-size: 1.2rem;
+}
+
+/* Animation for collapsible content */
+#collapsible-content {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 15px;
+    }
+
+    .table thead th, 
+    .table tbody td {
+        padding: 10px;
+    }
+
+    .modal-dialog {
+        margin: 10px;
+    }
+
+    .description-cell {
+        max-width: 150px;
+    }
+
+    .modal-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .modal-header .d-flex {
+        margin-bottom: 10px;
+        width: 100%;
+    }
+
+    .modal-header .btn-close {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+    }
+}
