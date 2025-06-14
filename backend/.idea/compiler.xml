@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Annotation profile for Monthly Expense Tracker" enabled="true">
+        <sourceOutputDir name="../generated-sources/annotations" />
+        <sourceTestOutputDir name="../generated-test-sources/test-annotations" />
+        <module name="monthly.main" />
+        <module name="monthly.test" />
+      </profile>
+    </annotationProcessing>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="monthly" options="-parameters -verbose -Xlint:all,-options,-path" />
+      <module name="monthly.main" options="-parameters -verbose -Xlint:all,-options,-path" />
+      <module name="monthly.test" options="-parameters -verbose -Xlint:all,-options,-path" />
+    </option>
+  </component>
+</project>

@@ -29,3 +29,8 @@ bin/
 .DS_Store
 /target/
 /node_modules/
+/frontend/build/
+/frontend/build/app.js
+/frontend/build/styles.css
+/frontend/node_modules/
+/backend/target/

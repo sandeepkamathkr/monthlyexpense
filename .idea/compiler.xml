@@ -12,15 +12,26 @@
         <sourceOutputDir name="../generated-sources/annotations" />
         <sourceTestOutputDir name="../generated-test-sources/test-annotations" />
         <module name="MonthlyExpense.test" />
+        <module name="monthly.test" />
+        <module name="monthly.main" />
         <module name="MonthlyExpense.main" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="monthly" target="11" />
+      <module name="MonthlyExpense" target="11" />
+      <module name="MonthlyExpense.main" target="11" />
+      <module name="MonthlyExpense.test" target="11" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="MonthlyExpense" options="-parameters -verbose -Xlint:all,-options,-path" />
       <module name="MonthlyExpense.main" options="-parameters -verbose -Xlint:all,-options,-path" />
       <module name="MonthlyExpense.test" options="-parameters -verbose -Xlint:all,-options,-path" />
+      <module name="monthly" options="-parameters -verbose -Xlint:all,-options,-path" />
+      <module name="monthly.main" options="-parameters -verbose -Xlint:all,-options,-path" />
+      <module name="monthly.test" options="-parameters -verbose -Xlint:all,-options,-path" />
     </option>
   </component>
 </project>
