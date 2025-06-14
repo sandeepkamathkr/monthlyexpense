@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: monthly-expense-frontend:latest
+    ports:
+      - "80:80" # Maps host port 80 to container port 80 (assuming your frontend serves on 80)
+    container_name: monthly-expense-frontend-app
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: monthly-expense-backend:latest
+    ports:
+      - "8081:8081" # Maps host port 8081 to container port 8081
+    volumes:
+      - ./backend/data:/app/data # Mounts the local data directory to /app/data in the container
+    container_name: monthly-expense-backend-app
+    environment:
+      # Add any backend-specific environment variables here if needed
+      # Example: SPRING_PROFILES_ACTIVE=docker
+      SPRING_DATASOURCE_URL: jdbc:h2:file:/app/data/expense_db
+      # Ensure your application.properties or equivalent uses this path for H2
+
+volumes:
+  backend_data: # You can define a named volume if you prefer Docker to manage it
+

@@ -2,13 +2,15 @@
   "name": "monthly-expense",
   "version": "1.0.0",
   "description": "Monthly Expense Tracker",
-  "main": "src/main/resources/static/app.js",
+  "main": "app.js",
   "scripts": {
-    "start": "mvn spring-boot:run",
-    "build": "mvn clean package",
-    "test": "mvn test",
+    "start": "cd ../backend && mvn spring-boot:run",
+    "build": "cd ../backend && mvn clean package",
+    "test": "cd ../backend && mvn test",
     "eject": "react-scripts eject",
-    "serve": "serve -s src/main/resources/static"
+    "serve": "npm run start & while ! nc -z localhost 8081; do sleep 1; done && serve -s .",
+    "start-react": "serve -s public/",
+    "build-react": "react-scripts build"
   },
   "dependencies": {
     "axios": "^1.3.4",
