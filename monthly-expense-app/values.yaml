@@ -1,0 +1,34 @@
+# Configuration for the backend subchart.
+backend:
+  replicaCount: 2
+  # ... other backend values
+
+# Configuration for the frontend subchart.
+frontend:
+  replicaCount: 1
+  # ... other frontend values
+
+# --- CHANGE THIS SECTION ---
+# By placing postgresql config under 'global', it becomes accessible
+# to all subcharts (like 'backend') via .Values.global
+global:
+  postgresql:
+    auth:
+      database: monthly_expense_db
+      username: postgres
+      # The password is not needed here because the backend template
+      # reads it directly from the Kubernetes secret.
+
+# This top-level postgresql key is still required to configure
+# the PostgreSQL chart itself during installation.
+postgresql:
+  auth:
+    database: monthly_expense_db
+    username: postgres
+    password: 4bTp9VmJ0D%
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+ingress:
+  enabled: true

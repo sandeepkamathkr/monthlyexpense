@@ -1,0 +1,36 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ingress
+  labels:
+    {{- include "monthly-expense-app.labels" . | nindent 4 }}
+  # The global rewrite-target annotation has been removed for clarity and correctness.
+  # Routing is now handled by path ordering, which is the standard practice.
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          # Rule 1: Most specific path comes first.
+          # Any request starting with /api/ will be sent to the backend.
+          # The full path (e.g., /api/transactions) is preserved.
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 8081
+
+          # Rule 2: The "catch-all" rule for the frontend comes last.
+          # Any other request (e.g., /, /about, /static/css/main.css)
+          # will be sent to the frontend service.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
+{{- end }}

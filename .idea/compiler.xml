@@ -12,13 +12,13 @@
         <sourceOutputDir name="../generated-sources/annotations" />
         <sourceTestOutputDir name="../generated-test-sources/test-annotations" />
         <module name="MonthlyExpense.test" />
-        <module name="monthly.test" />
-        <module name="monthly.main" />
+        <module name="monthly.test.test" />
         <module name="MonthlyExpense.main" />
+        <module name="monthly.test.main" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="monthly" target="11" />
+      <module name="monthly.main" target="11" />
       <module name="MonthlyExpense" target="11" />
       <module name="MonthlyExpense.main" target="11" />
       <module name="MonthlyExpense.test" target="11" />
@@ -31,7 +31,8 @@
       <module name="MonthlyExpense.test" options="-parameters -verbose -Xlint:all,-options,-path" />
       <module name="monthly" options="-parameters -verbose -Xlint:all,-options,-path" />
       <module name="monthly.main" options="-parameters -verbose -Xlint:all,-options,-path" />
-      <module name="monthly.test" options="-parameters -verbose -Xlint:all,-options,-path" />
+      <module name="monthly.test.main" options="-parameters -verbose -Xlint:all,-options,-path" />
+      <module name="monthly.test.test" options="-parameters -verbose -Xlint:all,-options,-path" />
     </option>
   </component>
 </project>

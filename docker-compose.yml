@@ -5,9 +5,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: monthly-expense-frontend:latest
+    image: monthly-expense-frontend:1.0.1
     ports:
-      - "80:80" # Maps host port 80 to container port 80 (assuming your frontend serves on 80)
+      - "80:80"
     container_name: monthly-expense-frontend-app
     depends_on:
       - backend
@@ -16,18 +16,28 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: monthly-expense-backend:latest
+    image: monthly-expense-backend:1.1.0
     ports:
-      - "8081:8081" # Maps host port 8081 to container port 8081
-    volumes:
-      - ./backend/data:/app/data # Mounts the local data directory to /app/data in the container
+      - "8081:8081"
     container_name: monthly-expense-backend-app
+    depends_on:
+      - db  # Add dependency on the database
     environment:
-      # Add any backend-specific environment variables here if needed
-      # Example: SPRING_PROFILES_ACTIVE=docker
-      SPRING_DATASOURCE_URL: jdbc:h2:file:/app/data/expense_db
-      # Ensure your application.properties or equivalent uses this path for H2
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/monthly_expense
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_PROFILES_ACTIVE: docker  # Activate a specific profile if needed
+
+  db:
+    image: postgres:17  # Use a specific version for consistency
+    ports:
+      - "5432:5432"  # Expose the port for debugging (optional, remove in production)
+    volumes:
+      - db_data:/var/lib/postgresql/data  # Persist data
+    environment:
+      POSTGRES_DB: monthly_expense_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
 
 volumes:
-  backend_data: # You can define a named volume if you prefer Docker to manage it
-
+  db_data:  # Define the volume for PostgreSQL data
