@@ -1,0 +1,11 @@
+replicaCount: 1
+
+image:
+  # Replace with your Docker Hub username and image name
+  repository: sandeepkamathkr/monthly-expense-frontend
+  tag: 1.0.0
+  pullPolicy: IfNotPresent
+
+service:
+  type: LoadBalancer # Exposes the service outside the cluster
+  port: 80
