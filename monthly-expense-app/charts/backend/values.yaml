@@ -1,0 +1,12 @@
+replicaCount: 1
+
+image:
+  # Replace with your Docker Hub username and image name
+  repository: sandeepkamathkr/monthly-expense-backend
+  tag: 1.1.1
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 8081
+

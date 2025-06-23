@@ -1,6 +1,5 @@
 // API base URL - change this to match your backend URL in production
-const API_BASE_URL = 'http://localhost:8081/api/transactions';
-
+const API_BASE_URL = '/api/transactions';
 // Utility function to format currency
 const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {

@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            # The full JDBC URL pointing to the PostgreSQL service.
+            # The service name is typically <release-name>-postgresql.
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://{{ .Release.Name }}-postgresql:5432/{{ .Values.global.postgresql.auth.database }}"
+            # The username for the database connection.
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "{{ .Values.global.postgresql.auth.username }}"
+            # Securely get the password from the Secret created by the PostgreSQL chart.
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  # The Bitnami chart creates a secret named <release-name>-postgresql
+                  name: "{{ .Release.Name }}-postgresql"
+                  # The key for the password within that secret is 'postgres-password'
+                  key: postgres-password
+          livenessProbe:
+          # CODE QUALITY: Corrected httpGet syntax.
+          # It now correctly references the named port 'http'.
+            httpGet:
+              path: /actuator/health/liveness
+              port: http # Use the name of the port defined above
+          # CODE QUALITY: Increased initial delay for liveness.
+          # This gives a Spring Boot app more time to start before being
+          # considered "dead" and restarted.
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 1
+            failureThreshold: 3
+          readinessProbe:
+            # CODE QUALITY: Corrected httpGet syntax.
+            httpGet:
+              path: /actuator/health/readiness
+              port: http # Use the name of the port defined above
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 1
+            failureThreshold: 3
+      resources:
+        requests:
+           cpu: 100m
+           memory: 128Mi
+        limits:
+           cpu: 100m
+           memory: 128Mi

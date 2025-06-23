@@ -12,7 +12,7 @@
 
     <groupId>com.expense</groupId>
     <artifactId>monthly</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.1.1-SNAPSHOT</version>
     <name>Monthly Expense Tracker</name>
     <description>Application to track and analyze monthly expenses</description>
 
@@ -67,6 +67,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.3</version>
+        </dependency>
+
         <!-- CSV Processing -->
         <dependency>
             <groupId>com.opencsv</groupId>
@@ -118,6 +124,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Actuator -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
     </dependencies>
 
