@@ -7,5 +7,5 @@ image:
   pullPolicy: Always
 
 service:
-  type: LoadBalancer # Exposes the service outside the cluster
+  type: ClusterIP # Exposes the service outside the cluster
   port: 80
