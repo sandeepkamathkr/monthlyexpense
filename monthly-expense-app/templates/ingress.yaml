@@ -9,6 +9,16 @@ metadata:
   # Routing is now handled by path ordering, which is the standard practice.
 spec:
   ingressClassName: nginx
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
   rules:
     - http:
         paths:

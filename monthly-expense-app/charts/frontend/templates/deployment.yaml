@@ -23,3 +23,9 @@ spec:
           env:
             - name: REACT_APP_API_URL # This must match what your JS code expects
               value: "http://backend-service:8081" # The internal service U
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
+            - name: KUBERNETES_SERVICE_HOST
+              value: ""
+            - name: KUBERNETES_SERVICE_PORT
+              value: ""

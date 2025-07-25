@@ -1,5 +1,10 @@
+import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import './styles.css';
+
 // API base URL - change this to match your backend URL in production
 const API_BASE_URL = '/api/transactions';
+
 // Utility function to format currency
 const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
@@ -20,10 +25,10 @@ const formatDate = (dateString) => {
 
 // File Upload Component
 const FileUpload = ({onUploadSuccess}) => {
-    const [selectedFile, setSelectedFile] = React.useState(null);
-    const [isUploading, setIsUploading] = React.useState(false);
-    const [message, setMessage] = React.useState('');
-    const [error, setError] = React.useState('');
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
 
     const handleFileChange = (event) => {
         setSelectedFile(event.target.files[0]);
@@ -99,12 +104,10 @@ const FileUpload = ({onUploadSuccess}) => {
     );
 };
 
-
-
 // Category Transactions Modal Component
 const CategoryTransactionsModal = ({show, onClose, category, transactions}) => {
-    const [sortField, setSortField] = React.useState('date');
-    const [sortDirection, setSortDirection] = React.useState('desc');
+    const [sortField, setSortField] = useState('date');
+    const [sortDirection, setSortDirection] = useState('desc');
 
     if (!show) {
         return null;
@@ -238,11 +241,11 @@ const CategoryTransactionsModal = ({show, onClose, category, transactions}) => {
 
 // Category Totals Table Component
 const CategoryTotalsTable = ({categoryTotals, transactions}) => {
-    const [showModal, setShowModal] = React.useState(false);
-    const [selectedCategory, setSelectedCategory] = React.useState('');
-    const [sortField, setSortField] = React.useState('amount');
-    const [sortDirection, setSortDirection] = React.useState('desc');
-    const [hoveredCategory, setHoveredCategory] = React.useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [sortField, setSortField] = useState('amount');
+    const [sortDirection, setSortDirection] = useState('desc');
+    const [hoveredCategory, setHoveredCategory] = useState(null);
 
     const handleCategoryClick = (category) => {
         setSelectedCategory(category);
@@ -275,16 +278,16 @@ const CategoryTotalsTable = ({categoryTotals, transactions}) => {
 
             if (sortField === 'percentage') {
                 // Sort by percentage (same as amount)
-                return sortDirection === 'asc' 
-                    ? amountA - amountB 
+                return sortDirection === 'asc'
+                    ? amountA - amountB
                     : amountB - amountA;
             } else if (sortField === 'category') {
-                return sortDirection === 'asc' 
-                    ? categoryA.localeCompare(categoryB) 
+                return sortDirection === 'asc'
+                    ? categoryA.localeCompare(categoryB)
                     : categoryB.localeCompare(categoryA);
             } else { // amount
-                return sortDirection === 'asc' 
-                    ? amountA - amountB 
+                return sortDirection === 'asc'
+                    ? amountA - amountB
                     : amountB - amountA;
             }
         });
@@ -365,7 +368,7 @@ const CategoryTotalsTable = ({categoryTotals, transactions}) => {
                 <table className="table table-hover category-table">
                     <thead>
                     <tr>
-                        <th 
+                        <th
                             onClick={() => handleSort('category')}
                             className="sortable-header category-column"
                         >
@@ -373,13 +376,13 @@ const CategoryTotalsTable = ({categoryTotals, transactions}) => {
                                 <i className="bi bi-tag me-1 sort-icon"></i>
                                 <span>Category</span>
                                 {sortField === 'category' && (
-                                    <i className={`bi ms-1 ${sortDirection === 'asc' 
-                                        ? 'bi-sort-up' 
+                                    <i className={`bi ms-1 ${sortDirection === 'asc'
+                                        ? 'bi-sort-up'
                                         : 'bi-sort-down'}`}></i>
                                 )}
                             </div>
                         </th>
-                        <th 
+                        <th
                             onClick={() => handleSort('amount')}
                             className="sortable-header amount-column"
                         >
@@ -387,13 +390,13 @@ const CategoryTotalsTable = ({categoryTotals, transactions}) => {
                                 <i className="bi bi-currency-dollar me-1 sort-icon"></i>
                                 <span>Amount</span>
                                 {sortField === 'amount' && (
-                                    <i className={`bi ms-1 ${sortDirection === 'asc' 
-                                        ? 'bi-sort-up' 
+                                    <i className={`bi ms-1 ${sortDirection === 'asc'
+                                        ? 'bi-sort-up'
                                         : 'bi-sort-down'}`}></i>
                                 )}
                             </div>
                         </th>
-                        <th 
+                        <th
                             onClick={() => handleSort('percentage')}
                             className="sortable-header percentage-column"
                         >
@@ -401,8 +404,8 @@ const CategoryTotalsTable = ({categoryTotals, transactions}) => {
                                 <i className="bi bi-pie-chart me-1 sort-icon"></i>
                                 <span>% of Total</span>
                                 {sortField === 'percentage' && (
-                                    <i className={`bi ms-1 ${sortDirection === 'asc' 
-                                        ? 'bi-sort-up' 
+                                    <i className={`bi ms-1 ${sortDirection === 'asc'
+                                        ? 'bi-sort-up'
                                         : 'bi-sort-down'}`}></i>
                                 )}
                             </div>
@@ -429,8 +432,8 @@ const CategoryTotalsTable = ({categoryTotals, transactions}) => {
                                 >
                                     <td>
                                         <div className="d-flex align-items-center">
-                                            <div 
-                                                className="category-color-indicator me-2" 
+                                            <div
+                                                className="category-color-indicator me-2"
                                                 style={{backgroundColor: getCategoryColor(category)}}
                                             ></div>
                                             <span className="category-name">{capitalizeWords(category)}</span>
@@ -441,15 +444,15 @@ const CategoryTotalsTable = ({categoryTotals, transactions}) => {
                                     <td className="percentage-cell">
                                         <div className="d-flex align-items-center">
                                             <div className="progress flex-grow-1 me-2">
-                                                <div 
-                                                    className="progress-bar" 
-                                                    role="progressbar" 
+                                                <div
+                                                    className="progress-bar"
+                                                    role="progressbar"
                                                     style={{
                                                         width: `${percentage}%`,
                                                         backgroundColor: getCategoryColor(category)
                                                     }}
-                                                    aria-valuenow={percentage} 
-                                                    aria-valuemin="0" 
+                                                    aria-valuenow={percentage}
+                                                    aria-valuemin="0"
                                                     aria-valuemax="100"
                                                 ></div>
                                             </div>
@@ -475,20 +478,20 @@ const CategoryTotalsTable = ({categoryTotals, transactions}) => {
 
 // Transactions Table Component
 const TransactionsTable = ({transactions}) => {
-    const [filteredTransactions, setFilteredTransactions] = React.useState(transactions);
-    const [descriptionFilter, setDescriptionFilter] = React.useState('');
-    const [categoryFilter, setCategoryFilter] = React.useState('');
-    const [isFiltering, setIsFiltering] = React.useState(false);
+    const [filteredTransactions, setFilteredTransactions] = useState(transactions);
+    const [descriptionFilter, setDescriptionFilter] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('');
+    const [isFiltering, setIsFiltering] = useState(false);
 
     // Update filtered transactions when props or filters change
-    React.useEffect(() => {
+    useEffect(() => {
         if (descriptionFilter || categoryFilter) {
             setIsFiltering(true);
             // Apply filters
             const filtered = transactions.filter(transaction => {
-                const matchesDescription = !descriptionFilter || 
+                const matchesDescription = !descriptionFilter ||
                     transaction.description.toLowerCase().includes(descriptionFilter.toLowerCase());
-                const matchesCategory = !categoryFilter || 
+                const matchesCategory = !categoryFilter ||
                     transaction.category.toLowerCase().includes(categoryFilter.toLowerCase());
                 return matchesDescription && matchesCategory;
             });
@@ -548,8 +551,8 @@ const TransactionsTable = ({transactions}) => {
                         </div>
                     </div>
                     <div className="col-md-2">
-                        <button 
-                            className="btn btn-outline-secondary w-100" 
+                        <button
+                            className="btn btn-outline-secondary w-100"
                             onClick={clearFilters}
                             disabled={!descriptionFilter && !categoryFilter}
                         >
@@ -567,8 +570,8 @@ const TransactionsTable = ({transactions}) => {
                         {descriptionFilter && (
                             <span className="badge bg-primary ms-2">
                                 Description: {descriptionFilter}
-                                <button 
-                                    className="btn-close btn-close-white ms-1" 
+                                <button
+                                    className="btn-close btn-close-white ms-1"
                                     style={{fontSize: '0.5rem'}}
                                     onClick={() => setDescriptionFilter('')}
                                 ></button>
@@ -577,8 +580,8 @@ const TransactionsTable = ({transactions}) => {
                         {categoryFilter && (
                             <span className="badge bg-primary ms-2">
                                 Category: {categoryFilter}
-                                <button 
-                                    className="btn-close btn-close-white ms-1" 
+                                <button
+                                    className="btn-close btn-close-white ms-1"
                                     style={{fontSize: '0.5rem'}}
                                     onClick={() => setCategoryFilter('')}
                                 ></button>
@@ -651,78 +654,157 @@ const Summary = ({totalAmount, monthlyTotals}) => {
 
 // Spending By Category Component
 const SpendingByCategory = ({categoryTotals}) => {
-    const chartRef = React.useRef(null);
-    const [chartInstance, setChartInstance] = React.useState(null);
+    const chartRef = useRef(null);
+    const chartInstanceRef = useRef(null);
+    const [isChartJsLoaded, setIsChartJsLoaded] = useState(false);
 
-    // Create chart when data changes
-    React.useEffect(() => {
-        if (chartRef.current && categoryTotals) {
-            // Destroy previous chart if it exists
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
+    // Load Chart.js once when component mounts
+    useEffect(() => {
+        // Check if Chart.js is already loaded
+        if (window.Chart) {
+            setIsChartJsLoaded(true);
+            return;
+        }
 
-            // Prepare data for chart - sort by amount and take top 10
-            const sortedCategories = Object.entries(categoryTotals)
-                .sort((a, b) => b[1] - a[1])  // Sort by amount (descending)
-                .slice(0, 10);  // Take only top 10
+        // Check if script is already being loaded
+        if (document.querySelector('script[src*="chart.js"]')) {
+            // Wait for existing script to load
+            const checkChart = setInterval(() => {
+                if (window.Chart) {
+                    setIsChartJsLoaded(true);
+                    clearInterval(checkChart);
+                }
+            }, 100);
+            return;
+        }
 
-            const categories = sortedCategories.map(item => item[0]);
-            const amounts = sortedCategories.map(item => item[1]);
+        // Load Chart.js script
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        script.onload = () => {
+            setIsChartJsLoaded(true);
+        };
+        script.onerror = () => {
+            console.error('Failed to load Chart.js');
+        };
+        document.head.appendChild(script);
 
-            // Create new chart
-            const ctx = chartRef.current.getContext('2d');
-            const newChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: categories,
-                    datasets: [{
-                        data: amounts,
-                        backgroundColor: [
-                            '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
-                            '#1abc9c', '#d35400', '#34495e', '#16a085', '#c0392b'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',  // Horizontal bar chart
-                    plugins: {
-                        legend: {
-                            display: false  // Hide legend as it's not needed for a single dataset
-                        },
-                        title: {
-                            display: true,
-                            text: 'Top 10 Spending Categories'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return formatCurrency(context.raw);
-                                }
+        // Cleanup function
+        return () => {
+            // Don't remove script as it might be used by other components
+        };
+    }, []); // Empty dependency array - run only once
+
+    // Create/update chart when data changes and Chart.js is loaded
+    useEffect(() => {
+        if (!isChartJsLoaded || !chartRef.current || !categoryTotals || Object.keys(categoryTotals).length === 0) {
+            return;
+        }
+
+        // Destroy previous chart if it exists
+        if (chartInstanceRef.current) {
+            chartInstanceRef.current.destroy();
+            chartInstanceRef.current = null;
+        }
+
+        // Prepare data for chart - sort by amount and take top 10
+        const sortedCategories = Object.entries(categoryTotals)
+            .sort((a, b) => b[1] - a[1])  // Sort by amount (descending)
+            .slice(0, 10);  // Take only top 10
+
+        if (sortedCategories.length === 0) {
+            return;
+        }
+
+        const categories = sortedCategories.map(item => item[0]);
+        const amounts = sortedCategories.map(item => item[1]);
+
+        // Create new chart
+        const ctx = chartRef.current.getContext('2d');
+        chartInstanceRef.current = new window.Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: categories,
+                datasets: [{
+                    data: amounts,
+                    backgroundColor: [
+                        '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
+                        '#1abc9c', '#d35400', '#34495e', '#16a085', '#c0392b'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',  // Horizontal bar chart
+                plugins: {
+                    legend: {
+                        display: false  // Hide legend as it's not needed for a single dataset
+                    },
+                    title: {
+                        display: true,
+                        text: 'Top 10 Spending Categories'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return formatCurrency(context.raw);
                             }
                         }
-                    },
-                    scales: {
-                        x: {
-                            ticks: {
-                                callback: function(value) {
-                                    return formatCurrency(value);
-                                }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrency(value);
                             }
                         }
                     }
                 }
-            });
+            }
+        });
 
-            setChartInstance(newChartInstance);
-        }
-    }, [categoryTotals]);
+    }, [categoryTotals, isChartJsLoaded]); // Removed chartInstance from dependencies
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (chartInstanceRef.current) {
+                chartInstanceRef.current.destroy();
+            }
+        };
+    }, []);
+
+    // Show loading state while Chart.js loads
+    if (!isChartJsLoaded) {
+        return (
+            <div className="chart-container d-flex justify-content-center align-items-center" style={{minHeight: '300px'}}>
+                <div className="text-center">
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading chart...</span>
+                    </div>
+                    <p className="mt-2 text-muted">Loading chart...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show message if no data
+    if (!categoryTotals || Object.keys(categoryTotals).length === 0) {
+        return (
+            <div className="chart-container d-flex justify-content-center align-items-center" style={{minHeight: '300px'}}>
+                <div className="text-center text-muted">
+                    <i className="bi bi-bar-chart fs-1 mb-2"></i>
+                    <p>No category data available</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="chart-container">
+        <div className="chart-container" style={{height: '400px'}}>
             <canvas ref={chartRef}></canvas>
         </div>
     );
@@ -730,7 +812,7 @@ const SpendingByCategory = ({categoryTotals}) => {
 
 // Collapsible Card Component
 const CollapsibleCard = ({ title, children, defaultExpanded = true }) => {
-    const [isExpanded, setIsExpanded] = React.useState(defaultExpanded);
+    const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
     const toggleExpand = () => {
         setIsExpanded(!isExpanded);
@@ -740,8 +822,8 @@ const CollapsibleCard = ({ title, children, defaultExpanded = true }) => {
         <div className="card mb-4">
             <div className="card-header d-flex justify-content-between align-items-center">
                 <span>{title}</span>
-                <button 
-                    className="btn btn-sm btn-link p-0" 
+                <button
+                    className="btn btn-sm btn-link p-0"
                     onClick={toggleExpand}
                     aria-expanded={isExpanded}
                     aria-controls="collapsible-content"
@@ -760,12 +842,13 @@ const CollapsibleCard = ({ title, children, defaultExpanded = true }) => {
 
 // Main App Component
 const App = () => {
-    const [transactions, setTransactions] = React.useState([]);
-    const [totalAmount, setTotalAmount] = React.useState(0);
-    const [monthlyTotals, setMonthlyTotals] = React.useState({});
-    const [categoryTotals, setCategoryTotals] = React.useState({});
-    const [loading, setLoading] = React.useState(true);
-    const [error, setError] = React.useState('');
+    const [transactions, setTransactions] = useState([]);
+    const [totalAmount, setTotalAmount] = useState(0);
+    const [monthlyTotals, setMonthlyTotals] = useState({});
+    const [categoryTotals, setCategoryTotals] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
     // Load data from API
     const loadData = async () => {
         setLoading(true);
@@ -810,474 +893,83 @@ const App = () => {
         }
     };
 
-
     // Load data on component mount
-    React.useEffect(() => {
+    useEffect(() => {
         loadData();
     }, []);
 
-    return (
-        <div className="container">
-            <h1 className="app-title">Monthly Expense Tracker</h1>
-
-            <div className="row mb-4">
-                <div className="col-md-6">
-                    <FileUpload onUploadSuccess={loadData}/>
+    if (loading) {
+        return (
+            <div className="container mt-5">
+                <div className="text-center">
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-2">Loading data...</p>
                 </div>
-                <div className="col-md-6 d-flex align-items-center justify-content-center">
-                    <button className="btn btn-danger" onClick={handleReset}>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="container mt-5">
+                <div className="alert alert-danger" role="alert">
+                    <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                    {error}
+                    <button className="btn btn-outline-danger ms-3" onClick={loadData}>
+                        <i className="bi bi-arrow-clockwise me-1"></i>
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="container mt-4">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+                <h1 className="display-4">
+                    <i className="bi bi-receipt me-2"></i>
+                    Monthly Expense Tracker
+                </h1>
+                <div>
+                    <button className="btn btn-outline-primary me-2" onClick={loadData}>
+                        <i className="bi bi-arrow-clockwise me-1"></i>
+                        Refresh
+                    </button>
+                    <button className="btn btn-outline-danger" onClick={handleReset}>
+                        <i className="bi bi-trash me-1"></i>
                         Reset All Data
                     </button>
                 </div>
             </div>
 
+            <Summary totalAmount={totalAmount} monthlyTotals={monthlyTotals} />
 
-            {loading ? (
-                <div className="text-center">
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p>Loading data...</p>
-                </div>
-            ) : error ? (
-                <div className="alert alert-danger">{error}</div>
-            ) : (
-                <div>
-                    <Summary
-                        totalAmount={totalAmount}
-                        monthlyTotals={monthlyTotals}
-                    />
+            <div className="row">
+                <div className="col-md-6">
+                    <CollapsibleCard title="📊 Upload Data" defaultExpanded={false}>
+                        <FileUpload onUploadSuccess={loadData} />
+                    </CollapsibleCard>
 
-                    <CollapsibleCard title="Spending by Category">
+                    <CollapsibleCard title="📈 Spending by Category" defaultExpanded={true}>
                         <SpendingByCategory categoryTotals={categoryTotals} />
                     </CollapsibleCard>
+                </div>
 
-                    <CollapsibleCard title="Category Totals">
-                        <CategoryTotalsTable categoryTotals={categoryTotals} transactions={transactions}/>
-                    </CollapsibleCard>
-
-                    <CollapsibleCard title="Transactions">
-                        <TransactionsTable transactions={transactions}/>
+                <div className="col-md-6">
+                    <CollapsibleCard title="💰 Category Totals" defaultExpanded={true}>
+                        <CategoryTotalsTable categoryTotals={categoryTotals} transactions={transactions} />
                     </CollapsibleCard>
                 </div>
-            )}
+            </div>
+
+            <CollapsibleCard title="📋 All Transactions" defaultExpanded={false}>
+                <TransactionsTable transactions={transactions} />
+            </CollapsibleCard>
         </div>
     );
 };
 
-// Add CSS for improved UX
-const style = document.createElement('style');
-style.textContent = `
-    /* Import Bootstrap Icons */
-    @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css");
-
-    /* Card styling improvements */
-    .card {
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        transition: box-shadow 0.3s ease;
-        overflow: hidden;
-        border: none;
-    }
-
-    .card:hover {
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-    }
-
-    .card-header {
-          background-color: #3498db;
-    color: white;
-    padding: 15px 20px;
-    font-weight: bold;
-    }
-
-    .card-body {
-        padding: 20px;
-    }
-
-    /* Category card specific styling */
-    .category-card .card-header {
-                  background-color: #3498db;
-    color: white;
-    padding: 15px 20px;
-    font-weight: bold;
-    }
-
-    .total-badge {
-        font-size: 0.9rem;
-        padding: 8px 12px;
-        background-color: #0d6efd;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .info-text {
-        color: #6c757d;
-        font-size: 0.9rem;
-        padding: 8px 12px;
-        background-color: #f8f9fa;
-        border-radius: 5px;
-        border-left: 3px solid #0d6efd;
-    }
-
-    .info-text i {
-        color: #0d6efd;
-        margin-right: 5px;
-    }
-
-    /* Table styling improvements */
-    .table-container {
-        overflow-x: auto;
-        border-radius: 5px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-
-    .table {
-        margin-bottom: 0;
-        border-collapse: separate;
-        border-spacing: 0;
-        width: 100%;
-    }
-
-    .table thead th {
-        background-color: #f8f9fa;
-        border-top: none;
-        border-bottom: 2px solid #dee2e6;
-        padding: 12px 15px;
-        font-weight: 600;
-        color: #495057;
-    }
-
-    .table tbody td {
-        padding: 12px 15px;
-        vertical-align: middle;
-        border-top: 1px solid #dee2e6;
-    }
-
-    /* Category table styling */
-    .category-table {
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .category-table th {
-        position: relative;
-        padding: 12px 15px;
-    }
-
-    .category-column {
-        width: 40%;
-    }
-
-    .amount-column {
-        width: 25%;
-    }
-
-    .percentage-column {
-        width: 35%;
-    }
-
-    .sort-icon {
-        color: #6c757d;
-        font-size: 0.9rem;
-    }
-
-    .sortable-header:hover .sort-icon {
-        color: #007bff;
-    }
-
-    /* Total summary styling */
-    .total-summary {
-        display: flex;
-        align-items: center;
-        background-color: #f8f9fa;
-        padding: 8px 15px;
-        border-radius: 5px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-
-    .total-label {
-        font-weight: 600;
-        color: #495057;
-        margin-right: 10px;
-    }
-
-    .total-badge {
-        font-size: 1rem;
-        padding: 8px 12px;
-    }
-
-    /* Category row styling */
-    .category-row {
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .category-row:hover, .category-row.hovered {
-        background-color: #f0f7ff;
-        transform: translateY(-2px);
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    }
-
-    .category-row:hover td, .category-row.hovered td {
-        font-weight: bold;
-        color: #007bff;
-    }
-
-    .category-row:active {
-        transform: translateY(0);
-        background-color: #e6f0ff;
-    }
-
-    .category-color-indicator {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        display: inline-block;
-        flex-shrink: 0;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s ease;
-    }
-
-    .category-row:hover .category-color-indicator, 
-    .category-row.hovered .category-color-indicator {
-        transform: scale(1.2);
-    }
-
-    .category-name {
-        font-weight: 500;
-    }
-
-    .click-icon {
-        opacity: 0;
-        font-size: 0.8rem;
-        color: #6c757d;
-        transition: opacity 0.2s ease;
-    }
-
-    .category-row:hover .click-icon, .category-row.hovered .click-icon {
-        opacity: 1;
-        color: #007bff;
-    }
-
-    .amount-cell {
-        font-weight: 500;
-        text-align: right;
-    }
-
-    /* Progress bar styling */
-    .percentage-cell {
-        padding-right: 15px;
-    }
-
-    .progress {
-        height: 8px;
-        background-color: #e9ecef;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-
-    .progress-bar {
-        background-color: #007bff;
-        transition: width 0.6s ease;
-    }
-
-    .category-row:hover .progress-bar, .category-row.hovered .progress-bar {
-        background-color: #0056b3;
-    }
-
-    .percentage-value {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #6c757d;
-        min-width: 50px;
-        text-align: right;
-    }
-
-    .category-row:hover .percentage-value, .category-row.hovered .percentage-value {
-        color: #007bff;
-    }
-
-    /* Transaction table styling */
-    .transaction-table thead th {
-        background-color: #f0f7ff;
-    }
-
-    .transaction-row:hover {
-        background-color: #f8f9fa;
-    }
-
-    .date-cell {
-        white-space: nowrap;
-        color: #495057;
-    }
-
-    .description-cell {
-        max-width: 300px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    /* Sortable header styling */
-    .sortable-header {
-        position: relative;
-        user-select: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .sortable-header:hover {
-        background-color: #e9ecef;
-        color: #007bff;
-    }
-
-    .sortable-header i {
-        color: #007bff;
-    }
-
-    /* Modal styling improvements */
-    .modal {
-        backdrop-filter: blur(5px);
-    }
-
-    .modal-content {
-        border-radius: 10px;
-        border: none;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        animation: modalFadeIn 0.3s ease;
-    }
-
-    .modal-header {
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        color: white;
-        padding: 15px 20px;
-        background-color: #f8f9fa;
-    }
-
-    .modal-title {
-        font-weight: 600;
-        color: #495057;
-        display: flex;
-        align-items: center;
-    }
-
-    .modal-title i {
-        color: #0d6efd;
-    }
-
-    .transaction-count {
-        color: #6c757d;
-    }
-
-    .category-total {
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
-
-    .category-total .fw-bold {
-        color: #0d6efd;
-    }
-
-    .sort-instructions {
-        color: #6c757d;
-        font-size: 0.9rem;
-        padding: 8px 12px;
-        background-color: #f8f9fa;
-        border-radius: 5px;
-        display: inline-block;
-    }
-
-    .modal-body {
-        padding: 20px;
-    }
-
-    .modal-footer {
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
-        padding: 15px 20px;
-        background-color: #f8f9fa;
-    }
-
-    /* Animation for modal */
-    @keyframes modalFadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Collapsible Card Styles */
-    .card-header .btn-link {
-        color: white;
-        text-decoration: none;
-        transition: all 0.2s ease;
-    }
-
-    .card-header .btn-link:hover {
-        transform: scale(1.2);
-    }
-
-    .card-header .btn-link i {
-        font-size: 1.2rem;
-    }
-
-    /* Animation for collapsible content */
-    #collapsible-content {
-        animation: fadeIn 0.3s ease;
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Responsive improvements */
-    @media (max-width: 768px) {
-        .card-body {
-            padding: 15px;
-        }
-
-        .table thead th, 
-        .table tbody td {
-            padding: 10px;
-        }
-
-        .modal-dialog {
-            margin: 10px;
-        }
-
-        .description-cell {
-            max-width: 150px;
-        }
-
-        .modal-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .modal-header .d-flex {
-            margin-bottom: 10px;
-            width: 100%;
-        }
-
-        .modal-header .btn-close {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-        }
-    }
-`;
-document.head.appendChild(style);
-
-// Render the App component to the DOM
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App/>);
+export default App;
