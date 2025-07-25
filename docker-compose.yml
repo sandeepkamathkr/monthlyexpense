@@ -5,25 +5,25 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: monthly-expense-frontend:1.0.1
+    image: monthly-expense-frontend:latest
     ports:
       - "80:80"
     container_name: monthly-expense-frontend-app
     depends_on:
-      - backend
+      - backend-service
 
-  backend:
+  backend-service:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: monthly-expense-backend:1.1.0
+    image: monthly-expense-backend:latest
     ports:
       - "8081:8081"
     container_name: monthly-expense-backend-app
     depends_on:
       - db  # Add dependency on the database
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/monthly_expense
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/monthly_expense_db
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: password
       SPRING_PROFILES_ACTIVE: docker  # Activate a specific profile if needed
