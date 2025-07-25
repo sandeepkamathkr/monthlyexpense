@@ -42,7 +42,7 @@ The following table lists the configurable parameters of the chart and their def
 | `frontend.replicaCount`             | Number of frontend replicas                      | `1`                      |
 | `postgresql.auth.database`          | PostgreSQL database name                         | `monthly_expense_db`     |
 | `postgresql.auth.username`          | PostgreSQL username                              | `postgres`               |
-| `postgresql.auth.password`          | PostgreSQL password                              | `4bTp9VmJ0D%`            |
+| `postgresql.auth.password`          | PostgreSQL password                              | `<your-secure-password>` |
 | `postgresql.primary.persistence.enabled` | Enable PostgreSQL persistence               | `true`                   |
 | `postgresql.primary.persistence.size`    | PostgreSQL PVC size                         | `8Gi`                    |
 | `ingress.enabled`                   | Enable ingress resource                          | `true`                   |
