@@ -49,6 +49,7 @@ jobs:
       with:
         context: ./backend
         push: false
+        load: true
         tags: |
           ${{ env.BACKEND_IMAGE }}:latest
           ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
@@ -60,6 +61,7 @@ jobs:
       with:
         context: ./frontend
         push: false
+        load: true
         tags: |
           ${{ env.FRONTEND_IMAGE }}:latest
           ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
