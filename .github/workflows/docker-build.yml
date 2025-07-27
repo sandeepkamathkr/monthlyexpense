@@ -22,7 +22,7 @@ env:
   FRONTEND_IMAGE: monthly-expense-frontend
 
 jobs:
-  build-backend:
+  docker-build-and-test:
     runs-on: ubuntu-latest
     
     steps:
@@ -55,24 +55,6 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
-    - name: Test backend container
-      run: |
-        docker run --rm -d --name test-backend -p 8081:8081 ${{ env.BACKEND_IMAGE }}:latest
-        sleep 10
-        curl -f http://localhost:8081/actuator/health || exit 1
-        docker stop test-backend
-        echo "✅ Backend container test passed"
-
-  build-frontend:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      
     - name: Build frontend Docker image
       uses: docker/build-push-action@v5
       with:
@@ -84,6 +66,14 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         
+    - name: Test backend container
+      run: |
+        docker run --rm -d --name test-backend -p 8081:8081 ${{ env.BACKEND_IMAGE }}:latest
+        sleep 10
+        curl -f http://localhost:8081/actuator/health || exit 1
+        docker stop test-backend
+        echo "✅ Backend container test passed"
+        
     - name: Test frontend container
       run: |
         docker run --rm -d --name test-frontend -p 8080:80 ${{ env.FRONTEND_IMAGE }}:latest
@@ -91,28 +81,8 @@ jobs:
         curl -f http://localhost:8080/ || exit 1
         docker stop test-frontend
         echo "✅ Frontend container test passed"
-
-  test-docker-compose:
-    runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend]
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up JDK 11
-      uses: actions/setup-java@v4
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-        cache: maven
         
-    - name: Build JAR file
-      run: |
-        cd backend
-        mvn clean package -DskipTests
-        
-    - name: Test Docker Compose
+    - name: Test Docker Compose integration
       run: |
         # Temporarily modify docker-compose to use port 8080 to avoid conflicts
         sed -i 's/"80:80"/"8080:80"/' docker-compose.yml
