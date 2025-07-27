@@ -70,9 +70,17 @@ jobs:
         
     - name: Test backend container
       run: |
-        docker run --rm -d --name test-backend -p 8081:8081 ${{ env.BACKEND_IMAGE }}:latest
-        sleep 10
-        curl -f http://localhost:8081/actuator/health || exit 1
+        docker run --rm -d --name test-backend -p 8081:8081 \
+          -e SPRING_DATASOURCE_URL=jdbc:h2:mem:testdb \
+          -e SPRING_DATASOURCE_USERNAME=sa \
+          -e SPRING_DATASOURCE_PASSWORD=password \
+          -e SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.h2.Driver \
+          ${{ env.BACKEND_IMAGE }}:latest
+        sleep 15
+        echo "🔍 Checking if container is still running..."
+        docker ps | grep test-backend || (echo "❌ Container stopped unexpectedly" && docker logs test-backend && exit 1)
+        echo "🔍 Testing health endpoint..."
+        curl -f http://localhost:8081/actuator/health || (echo "❌ Health check failed" && docker logs test-backend && exit 1)
         docker stop test-backend
         echo "✅ Backend container test passed"
         
