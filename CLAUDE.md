@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Code Documentation Requirements
+
+**IMPORTANT**: When suggesting any code changes, additions, or new files, always provide:
+
+1. **Step-by-Step Explanation**: Detailed explanation of what each line/step does
+2. **Reasoning**: Why this specific approach was chosen over alternatives
+3. **Official Documentation**: Links to official documentation proving the approach is correct and follows best practices
+
+This ensures all code suggestions are educational, well-reasoned, and validated by authoritative sources.
+
 ## Project Overview
 
 Monthly Expense Tracker is a full-stack web application for tracking and analyzing monthly expenses. The application allows users to upload CSV files with transaction data, view transaction details, and analyze spending patterns with charts and summaries.
