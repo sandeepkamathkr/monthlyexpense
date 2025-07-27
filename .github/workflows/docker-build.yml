@@ -87,8 +87,13 @@ jobs:
     - name: Test frontend container
       run: |
         docker run --rm -d --name test-frontend -p 8080:80 ${{ env.FRONTEND_IMAGE }}:latest
-        sleep 5
-        curl -f http://localhost:8080/ || exit 1
+        sleep 10
+        echo "🔍 Checking if frontend container is still running..."
+        docker ps | grep test-frontend || (echo "❌ Frontend container stopped unexpectedly" && docker logs test-frontend && exit 1)
+        echo "🔍 Testing nginx status page first..."
+        curl -f http://localhost:8080/ -I || (echo "❌ Nginx not responding" && docker logs test-frontend && exit 1)
+        echo "🔍 Testing full HTTP response..."
+        curl -f http://localhost:8080/ || (echo "❌ Frontend HTTP test failed" && docker logs test-frontend && exit 1)
         docker stop test-frontend
         echo "✅ Frontend container test passed"
         
