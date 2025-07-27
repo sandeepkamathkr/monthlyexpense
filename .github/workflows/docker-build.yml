@@ -86,9 +86,9 @@ jobs:
         
     - name: Test frontend container
       run: |
-        docker run --rm -d --name test-frontend -p 80:80 ${{ env.FRONTEND_IMAGE }}:latest
+        docker run --rm -d --name test-frontend -p 8080:80 ${{ env.FRONTEND_IMAGE }}:latest
         sleep 5
-        curl -f http://localhost/ || exit 1
+        curl -f http://localhost:8080/ || exit 1
         docker stop test-frontend
         echo "✅ Frontend container test passed"
 
@@ -114,9 +114,11 @@ jobs:
         
     - name: Test Docker Compose
       run: |
+        # Temporarily modify docker-compose to use port 8080 to avoid conflicts
+        sed -i 's/"80:80"/"8080:80"/' docker-compose.yml
         docker-compose up -d
         sleep 30
-        curl -f http://localhost/ || exit 1
+        curl -f http://localhost:8080/ || exit 1
         curl -f http://localhost:8081/actuator/health || exit 1
         docker-compose down
         echo "✅ Docker Compose integration test passed"
