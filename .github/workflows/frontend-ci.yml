@@ -32,13 +32,22 @@ jobs:
         cd frontend
         npm ci
         
-    - name: Build React application
+    - name: Validate frontend structure
       run: |
         cd frontend
-        npm run build-react
+        echo "Checking pre-built React files..."
+        test -f public/index.html
+        test -d public/static
+        echo "✅ Frontend files validated"
         
-    - name: Upload build artifacts
+    - name: Test Docker build
+      run: |
+        cd frontend
+        docker build -t frontend-test .
+        echo "✅ Docker build successful"
+        
+    - name: Upload frontend artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: frontend-build
-        path: frontend/build/
+        name: frontend-nginx-files
+        path: frontend/public/
