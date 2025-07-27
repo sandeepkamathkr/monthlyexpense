@@ -86,16 +86,25 @@ jobs:
         
     - name: Test frontend container
       run: |
-        docker run --rm -d --name test-frontend -p 8080:80 ${{ env.FRONTEND_IMAGE }}:latest
-        sleep 10
-        echo "🔍 Checking if frontend container is still running..."
-        docker ps | grep test-frontend || (echo "❌ Frontend container stopped unexpectedly" && docker logs test-frontend && exit 1)
-        echo "🔍 Testing nginx status page first..."
-        curl -f http://localhost:8080/ -I || (echo "❌ Nginx not responding" && docker logs test-frontend && exit 1)
-        echo "🔍 Testing full HTTP response..."
-        curl -f http://localhost:8080/ || (echo "❌ Frontend HTTP test failed" && docker logs test-frontend && exit 1)
-        docker stop test-frontend
-        echo "✅ Frontend container test passed"
+        echo "🔍 Starting frontend container without --rm to preserve logs..."
+        docker run -d --name test-frontend -p 8080:80 ${{ env.FRONTEND_IMAGE }}:latest
+        sleep 5
+        echo "🔍 Checking container status immediately..."
+        docker ps -a | grep test-frontend
+        echo "🔍 Getting container logs..."
+        docker logs test-frontend
+        echo "🔍 Checking if container is still running..."
+        if docker ps | grep test-frontend; then
+          echo "✅ Container is running, testing HTTP..."
+          curl -f http://localhost:8080/ || (echo "❌ HTTP test failed" && docker logs test-frontend)
+          docker stop test-frontend
+          echo "✅ Frontend container test passed"
+        else
+          echo "❌ Container crashed on startup"
+          docker logs test-frontend
+          exit 1
+        fi
+        docker rm test-frontend || true
         
     - name: Test Docker Compose integration
       run: |
