@@ -53,11 +53,15 @@ jobs:
         echo "Working directory: $(pwd)"
         echo "SONAR_TOKEN present: $([ -n "$SONAR_TOKEN" ] && echo "Yes" || echo "No")"
         
-        # Run SonarCloud analysis with simplified approach
+        # Run SonarCloud analysis with proper source configuration
         mvn clean verify sonar:sonar \
           -Dsonar.projectKey=sandeepkamathkr_monthlyexpense \
           -Dsonar.organization=sandeepkamathkr \
           -Dsonar.host.url=https://sonarcloud.io \
-          -Dsonar.login=$SONAR_TOKEN
+          -Dsonar.login=$SONAR_TOKEN \
+          -Dsonar.sources=src/main/java \
+          -Dsonar.tests=src/test/java \
+          -Dsonar.java.binaries=target/classes \
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
           
         echo "✅ SonarCloud analysis completed successfully!"
