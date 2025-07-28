@@ -118,9 +118,9 @@ jobs:
       run: |
         # Temporarily modify docker-compose to use port 8080 to avoid conflicts
         sed -i 's/"80:80"/"8080:80"/' docker-compose.yml
-        docker-compose up -d
+        docker compose up -d
         sleep 30
         curl -f http://localhost:8080/ || exit 1
         curl -f http://localhost:8081/actuator/health || exit 1
-        docker-compose down
+        docker compose down
         echo "✅ Docker Compose integration test passed"
