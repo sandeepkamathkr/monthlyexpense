@@ -45,10 +45,25 @@ mvn clean compile           # Compile sources
 ```bash
 # From frontend/ directory
 npm start                   # Start full-stack (backend + frontend)
-npm run build-react         # Build React application
+npm run build-safe          # SAFE: Clean build to prevent Chrome crashes
+npm run build-clean         # SAFE: Use dedicated build script with verification  
+npm run deploy              # SAFE: Complete build + Docker deployment
 npm run start-react         # Serve frontend only (no backend API)
 npm test                    # Run frontend tests
+npm run verify-build        # Verify only one JS file exists (should output: 1)
 ```
+
+### ⚠️ CRITICAL: Chrome Crash Prevention
+**ALWAYS use `npm run build-safe` or `npm run build-clean` instead of `npm run build-react` alone.**
+
+The project previously suffered from Chrome "Aw, Snap! Error code 5" crashes due to multiple JavaScript files loading simultaneously. Our safe build commands prevent this by:
+1. Cleaning the public directory completely (`rm -rf public/*`)
+2. Copying the HTML template (`cp src/index.html public/`)
+3. Building React fresh (`npm run build-react`)
+4. Copying only new build files (`cp -r build/* public/`)
+5. Verifying only one JS file exists
+
+**Never use:** `npm run build-react && cp -r build/* public/` (causes file accumulation)
 
 ### Docker Development
 ```bash
