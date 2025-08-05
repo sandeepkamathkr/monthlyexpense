@@ -19,6 +19,15 @@ LABEL description="Frontend for Monthly Expense Tracker"
 COPY --from=builder /app/public/ /usr/share/nginx/html/
 COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
 
+# Verify build integrity - prevent multiple JS files
+RUN JS_COUNT=$(find /usr/share/nginx/html/static/js -name "main.*.js" 2>/dev/null | wc -l) && \
+    if [ "$JS_COUNT" -ne 1 ]; then \
+        echo "ERROR: Found $JS_COUNT main JS files! This will cause Chrome crashes." && \
+        find /usr/share/nginx/html/static/js -name "main.*.js" 2>/dev/null && \
+        exit 1; \
+    fi && \
+    echo "✅ Build verification passed: Only one main JS file found"
+
 # Clean up nginx default logs to save space and use stdout/stderr instead
 RUN ln -sf /dev/stdout /var/log/nginx/access.log && \
     ln -sf /dev/stderr /var/log/nginx/error.log

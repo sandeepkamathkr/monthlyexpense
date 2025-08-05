@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Claude Response Requirements
+
+When providing suggestions or recommendations, Claude must address these three questions:
+1. **Why** - Explain the reasoning behind the suggestion
+2. **How** - Describe how to implement or apply the suggestion
+3. **Where** - Provide documentation references or sources to verify the information
+
+## Git Commit Guidelines
+
+When creating git commits, do not add any reference to Claude in commit messages or code comments. Keep all commit messages professional and focused on the actual changes made.
+
 ## Project Overview
 
 Monthly Expense Tracker is a full-stack web application for tracking and analyzing monthly expenses. The application allows users to upload CSV files with transaction data, view transaction details, and analyze spending patterns with charts and summaries.
