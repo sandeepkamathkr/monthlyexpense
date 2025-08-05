@@ -652,144 +652,131 @@ const Summary = ({totalAmount, monthlyTotals}) => {
     );
 };
 
-// Spending By Category Component
+// Spending By Category Component (Stable Chart.js Implementation)
 const SpendingByCategory = ({categoryTotals}) => {
     const chartRef = useRef(null);
     const chartInstanceRef = useRef(null);
-    const [isChartJsLoaded, setIsChartJsLoaded] = useState(false);
+    const [chartError, setChartError] = useState(false);
+    
+    // Calculate top categories for display
+    const topCategories = Object.entries(categoryTotals || {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
 
-    // Load Chart.js once when component mounts
+    // Create chart effect
     useEffect(() => {
-        // Check if Chart.js is already loaded
-        if (window.Chart) {
-            setIsChartJsLoaded(true);
+        if (!chartRef.current || topCategories.length === 0) {
             return;
         }
 
-        // Check if script is already being loaded
-        if (document.querySelector('script[src*="chart.js"]')) {
-            // Wait for existing script to load
-            const checkChart = setInterval(() => {
-                if (window.Chart) {
-                    setIsChartJsLoaded(true);
-                    clearInterval(checkChart);
+        // Function to create the chart
+        const createChart = () => {
+            try {
+                // Destroy existing chart
+                if (chartInstanceRef.current) {
+                    chartInstanceRef.current.destroy();
+                    chartInstanceRef.current = null;
                 }
-            }, 100);
-            return;
-        }
 
-        // Load Chart.js script
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-        script.onload = () => {
-            setIsChartJsLoaded(true);
+                const ctx = chartRef.current.getContext('2d');
+                const categories = topCategories.map(item => item[0]);
+                const amounts = topCategories.map(item => item[1]);
+
+                chartInstanceRef.current = new window.Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: categories,
+                        datasets: [{
+                            data: amounts,
+                            backgroundColor: [
+                                '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
+                                '#1abc9c', '#d35400', '#34495e', '#16a085', '#c0392b'
+                            ],
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: `Top ${topCategories.length} Spending Categories`,
+                                font: {
+                                    size: 16,
+                                    weight: 'bold'
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return formatCurrency(context.raw);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return formatCurrency(value);
+                                    }
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    maxRotation: 0,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                setChartError(false);
+            } catch (error) {
+                console.error('Chart creation error:', error);
+                setChartError(true);
+            }
         };
-        script.onerror = () => {
-            console.error('Failed to load Chart.js');
-        };
-        document.head.appendChild(script);
+
+        // Load Chart.js if not already loaded
+        if (window.Chart) {
+            createChart();
+        } else {
+            // Load Chart.js dynamically
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js';
+            script.onload = () => {
+                createChart();
+            };
+            script.onerror = () => {
+                console.error('Failed to load Chart.js');
+                setChartError(true);
+            };
+            document.head.appendChild(script);
+        }
 
         // Cleanup function
         return () => {
-            // Don't remove script as it might be used by other components
-        };
-    }, []); // Empty dependency array - run only once
-
-    // Create/update chart when data changes and Chart.js is loaded
-    useEffect(() => {
-        if (!isChartJsLoaded || !chartRef.current || !categoryTotals || Object.keys(categoryTotals).length === 0) {
-            return;
-        }
-
-        // Destroy previous chart if it exists
-        if (chartInstanceRef.current) {
-            chartInstanceRef.current.destroy();
-            chartInstanceRef.current = null;
-        }
-
-        // Prepare data for chart - sort by amount and take top 10
-        const sortedCategories = Object.entries(categoryTotals)
-            .sort((a, b) => b[1] - a[1])  // Sort by amount (descending)
-            .slice(0, 10);  // Take only top 10
-
-        if (sortedCategories.length === 0) {
-            return;
-        }
-
-        const categories = sortedCategories.map(item => item[0]);
-        const amounts = sortedCategories.map(item => item[1]);
-
-        // Create new chart
-        const ctx = chartRef.current.getContext('2d');
-        chartInstanceRef.current = new window.Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: categories,
-                datasets: [{
-                    data: amounts,
-                    backgroundColor: [
-                        '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
-                        '#1abc9c', '#d35400', '#34495e', '#16a085', '#c0392b'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',  // Horizontal bar chart
-                plugins: {
-                    legend: {
-                        display: false  // Hide legend as it's not needed for a single dataset
-                    },
-                    title: {
-                        display: true,
-                        text: 'Top 10 Spending Categories'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return formatCurrency(context.raw);
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: {
-                            callback: function(value) {
-                                return formatCurrency(value);
-                            }
-                        }
-                    }
+            if (chartInstanceRef.current) {
+                try {
+                    chartInstanceRef.current.destroy();
+                    chartInstanceRef.current = null;
+                } catch (error) {
+                    console.error('Chart cleanup error:', error);
                 }
             }
-        });
-
-    }, [categoryTotals, isChartJsLoaded]); // Removed chartInstance from dependencies
-
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            if (chartInstanceRef.current) {
-                chartInstanceRef.current.destroy();
-            }
         };
-    }, []);
-
-    // Show loading state while Chart.js loads
-    if (!isChartJsLoaded) {
-        return (
-            <div className="chart-container d-flex justify-content-center align-items-center" style={{minHeight: '300px'}}>
-                <div className="text-center">
-                    <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Loading chart...</span>
-                    </div>
-                    <p className="mt-2 text-muted">Loading chart...</p>
-                </div>
-            </div>
-        );
-    }
+    }, [topCategories]);
 
     // Show message if no data
     if (!categoryTotals || Object.keys(categoryTotals).length === 0) {
@@ -803,8 +790,50 @@ const SpendingByCategory = ({categoryTotals}) => {
         );
     }
 
+    // Fallback to progress bars if Chart.js fails
+    if (chartError) {
+        const colors = [
+            '#3498db', '#2ecc71', '#e74c3c', '#f39c12', 
+            '#9b59b6', '#1abc9c', '#d35400', '#34495e'
+        ];
+        const maxAmount = topCategories.length > 0 ? topCategories[0][1] : 0;
+        
+        return (
+            <div className="chart-container">
+                <div className="alert alert-warning mb-3">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    Chart.js unavailable - showing simplified view
+                </div>
+                <div className="row g-2">
+                    {topCategories.slice(0, 8).map(([category, amount], index) => {
+                        const percentage = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
+                        const color = colors[index] || '#6c757d';
+                        
+                        return (
+                            <div key={category} className="col-12">
+                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                    <span className="fw-medium text-truncate" style={{maxWidth: '70%'}}>{category}</span>
+                                    <span className="badge bg-primary rounded-pill">{formatCurrency(amount)}</span>
+                                </div>
+                                <div className="progress" style={{height: '8px'}}>
+                                    <div 
+                                        className="progress-bar" 
+                                        style={{
+                                            width: `${percentage}%`,
+                                            backgroundColor: color
+                                        }}
+                                    ></div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="chart-container" style={{height: '400px'}}>
+        <div className="chart-container" style={{height: '400px', position: 'relative'}}>
             <canvas ref={chartRef}></canvas>
         </div>
     );
