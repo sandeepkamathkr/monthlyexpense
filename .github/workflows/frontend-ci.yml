@@ -1,0 +1,53 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: Validate frontend structure
+      run: |
+        cd frontend
+        echo "Checking pre-built React files..."
+        test -f public/index.html
+        test -d public/static
+        echo "✅ Frontend files validated"
+        
+    - name: Test Docker build
+      run: |
+        cd frontend
+        docker build -t frontend-test .
+        echo "✅ Docker build successful"
+        
+    - name: Upload frontend artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-nginx-files
+        path: frontend/public/
