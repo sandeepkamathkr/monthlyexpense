@@ -239,8 +239,83 @@ const CategoryTransactionsModal = ({show, onClose, category, transactions}) => {
     );
 };
 
+// Month/Year Selector Component
+const MonthYearSelector = ({ selectedMonth, selectedYear, onMonthYearChange }) => {
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+    const months = [
+        { value: null, label: 'All Months' },
+        { value: 1, label: 'January' },
+        { value: 2, label: 'February' },
+        { value: 3, label: 'March' },
+        { value: 4, label: 'April' },
+        { value: 5, label: 'May' },
+        { value: 6, label: 'June' },
+        { value: 7, label: 'July' },
+        { value: 8, label: 'August' },
+        { value: 9, label: 'September' },
+        { value: 10, label: 'October' },
+        { value: 11, label: 'November' },
+        { value: 12, label: 'December' }
+    ];
+
+    const handleMonthChange = (e) => {
+        const month = e.target.value === '' ? null : parseInt(e.target.value);
+        onMonthYearChange(month, selectedYear);
+    };
+
+    const handleYearChange = (e) => {
+        const year = parseInt(e.target.value);
+        onMonthYearChange(selectedMonth, year);
+    };
+
+    return (
+        <div className="mb-3">
+            <div className="row g-2">
+                <div className="col-md-6">
+                    <label htmlFor="monthSelect" className="form-label small">Month Filter:</label>
+                    <select
+                        id="monthSelect"
+                        className="form-select form-select-sm"
+                        value={selectedMonth || ''}
+                        onChange={handleMonthChange}
+                    >
+                        {months.map(month => (
+                            <option key={month.value || 'all'} value={month.value || ''}>
+                                {month.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="col-md-6">
+                    <label htmlFor="yearSelect" className="form-label small">Year Filter:</label>
+                    <select
+                        id="yearSelect"
+                        className="form-select form-select-sm"
+                        value={selectedYear}
+                        onChange={handleYearChange}
+                    >
+                        {years.map(year => (
+                            <option key={year} value={year}>{year}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+            <div className="mt-2">
+                <small className="text-muted">
+                    <i className="bi bi-info-circle me-1"></i>
+                    {selectedMonth ? 
+                        `Showing category totals for ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}` :
+                        `Showing category totals for all months in ${selectedYear}`
+                    }
+                </small>
+            </div>
+        </div>
+    );
+};
+
 // Category Totals Table Component
-const CategoryTotalsTable = ({categoryTotals, transactions}) => {
+const CategoryTotalsTable = ({categoryTotals, transactions, selectedMonth, selectedYear, onMonthYearChange}) => {
     const [showModal, setShowModal] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [sortField, setSortField] = useState('amount');
@@ -353,6 +428,11 @@ const CategoryTotalsTable = ({categoryTotals, transactions}) => {
 
     return (
         <div>
+            <MonthYearSelector 
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+                onMonthYearChange={onMonthYearChange}
+            />
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <div className="info-text">
                     <i className="bi bi-info-circle"></i> Click on any category to view detailed transactions
@@ -877,6 +957,41 @@ const App = () => {
     const [categoryTotals, setCategoryTotals] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [selectedMonth, setSelectedMonth] = useState(null);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    // Load category totals based on selected month/year
+    const loadCategoryTotals = async (month = null, year = null) => {
+        try {
+            let url = `${API_BASE_URL}/category-totals`;
+            const params = [];
+            
+            if (month) params.push(`month=${month}`);
+            if (year) params.push(`year=${year}`);
+            
+            if (params.length > 0) {
+                url += `?${params.join('&')}`;
+            }
+            
+            const categoryResponse = await axios.get(url);
+            setCategoryTotals(categoryResponse.data);
+        } catch (error) {
+            console.error('Error loading category totals:', error);
+            
+            // Handle validation errors specifically
+            if (error.response && error.response.status === 400) {
+                const errorData = error.response.data;
+                if (errorData.fieldErrors) {
+                    const errorMessages = Object.values(errorData.fieldErrors).join(', ');
+                    setError(`Invalid parameters: ${errorMessages}`);
+                } else {
+                    setError(errorData.message || 'Invalid request parameters');
+                }
+            } else {
+                setError('Failed to load category totals. Please try again.');
+            }
+        }
+    };
 
     // Load data from API
     const loadData = async () => {
@@ -897,15 +1012,21 @@ const App = () => {
             const monthlyResponse = await axios.get(`${API_BASE_URL}/monthly-totals?year=${currentYear}`);
             setMonthlyTotals(monthlyResponse.data);
 
-            // Get category totals
-            const categoryResponse = await axios.get(`${API_BASE_URL}/category-totals`);
-            setCategoryTotals(categoryResponse.data);
+            // Get category totals based on current selection
+            await loadCategoryTotals(selectedMonth, selectedYear);
         } catch (error) {
             console.error('Error loading data:', error);
             setError('Failed to load data. Please try again later.');
         } finally {
             setLoading(false);
         }
+    };
+
+    // Handle month/year selection change
+    const handleMonthYearChange = async (month, year) => {
+        setSelectedMonth(month);
+        setSelectedYear(year);
+        await loadCategoryTotals(month, year);
     };
 
     // Reset all data
@@ -989,7 +1110,13 @@ const App = () => {
 
                 <div className="col-md-6">
                     <CollapsibleCard title="💰 Category Totals" defaultExpanded={true}>
-                        <CategoryTotalsTable categoryTotals={categoryTotals} transactions={transactions} />
+                        <CategoryTotalsTable 
+                            categoryTotals={categoryTotals} 
+                            transactions={transactions} 
+                            selectedMonth={selectedMonth}
+                            selectedYear={selectedYear}
+                            onMonthYearChange={handleMonthYearChange}
+                        />
                     </CollapsibleCard>
                 </div>
             </div>

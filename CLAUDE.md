@@ -33,7 +33,44 @@ Monthly Expense Tracker is a full-stack web application for tracking and analyzi
 
 ## Development Commands
 
-### Backend (Java Spring Boot)
+### Docker Development Workflow (REQUIRED)
+
+**IMPORTANT**: Whenever you make changes to frontend or backend code, you MUST use the Docker workflow to test your changes. Local development commands are provided for reference only.
+
+```bash
+# From frontend/ directory - ALWAYS use this workflow after code changes
+./docker-build.sh           # Rebuild both frontend and backend Docker images
+docker-compose up -d         # Start all services (frontend, backend, PostgreSQL)
+
+# Verify deployment
+docker-compose ps            # Check all containers are running
+curl http://localhost/       # Test frontend (port 80)
+curl http://localhost:8081/api/transactions  # Test backend API (port 8081)
+
+# Stop services when done
+docker-compose down          # Stop all containers
+```
+
+### Frontend Build Requirements
+
+Before running `docker-build.sh`, ensure the React app is properly built:
+
+```bash
+# From frontend/ directory
+# 1. Clean and rebuild React application
+rm -rf build && npx react-scripts build
+
+# 2. Copy build files to public directory (required by Dockerfile)
+rm -rf public/static && cp -r build/* public/
+
+# 3. Verify only one main JS file exists (prevents Chrome crashes)
+find public/static/js -name "main.*.js" | wc -l  # Should return 1
+
+# 4. Now run Docker build
+./docker-build.sh && docker-compose up -d
+```
+
+### Backend (Java Spring Boot) - Local Development Only
 ```bash
 # From root directory or backend/
 mvn spring-boot:run          # Start backend server on port 8081
@@ -42,7 +79,7 @@ mvn test                    # Run unit tests
 mvn clean compile           # Compile sources
 ```
 
-### Frontend (React)
+### Frontend (React) - Local Development Only
 ```bash
 # From frontend/ directory
 npm start                   # Start full-stack (backend + frontend)
@@ -137,12 +174,66 @@ Date,Description,Amount,Category
 
 ## Testing
 
-### Backend Tests
+### Mandatory Testing After Code Changes
+
+**IMPORTANT**: After making any frontend or backend changes, you MUST follow this testing protocol:
+
+#### 1. Backend API Testing
+```bash
+# Test basic endpoints after Docker deployment
+curl -s "http://localhost:8081/api/transactions" | jq '. | length'
+curl -s "http://localhost:8081/api/transactions/category-totals" | jq 'keys | length'
+
+# Test any new endpoints with parameters
+curl -s "http://localhost:8081/api/transactions/category-totals?month=11&year=2025" | jq
+
+# Verify error handling
+curl -s "http://localhost:8081/api/transactions/category-totals?month=invalid" 
+```
+
+#### 2. Frontend UI Testing
+```bash
+# 1. Access application
+open http://localhost/  # or curl -s -o /dev/null -w "%{http_code}" http://localhost/
+
+# 2. Manual testing checklist:
+# - Upload a CSV file successfully
+# - Navigate through different sections
+# - Test new UI components (e.g., MonthYearSelector)
+# - Verify data displays correctly
+# - Check browser console for errors (F12 → Console)
+# - Test responsive design on different screen sizes
+```
+
+#### 3. Integration Testing
+```bash
+# Test full workflow after changes
+# 1. Upload sample data via frontend
+# 2. Verify data appears in all relevant sections
+# 3. Test filtering/sorting functionality
+# 4. Verify API responses match UI display
+```
+
+#### 4. Container Health Testing
+```bash
+# Verify all containers are healthy
+docker-compose ps
+docker-compose logs backend-service | tail -20
+docker-compose logs frontend | tail -20
+
+# Test container restart resilience
+docker-compose restart backend-service
+curl -s "http://localhost:8081/api/transactions/total"
+```
+
+### Unit Tests
+
+#### Backend Tests
 - Unit tests for controllers, services, and repositories
 - Uses JUnit 5, Mockito, and Spring Boot Test
 - Run with: `mvn test`
 
-### Frontend Tests
+#### Frontend Tests
 - React component tests (if configured)
 - Run with: `npm test`
 

@@ -12,7 +12,7 @@
 
     <groupId>com.expense</groupId>
     <artifactId>monthly</artifactId>
-    <version>1.1.1-SNAPSHOT</version>
+    <version>1.2.0</version>
     <name>Monthly Expense Tracker</name>
     <description>Application to track and analyze monthly expenses</description>
 

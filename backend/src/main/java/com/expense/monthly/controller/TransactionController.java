@@ -8,6 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -24,7 +27,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/transactions")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
+@Validated
 public class TransactionController {
 
     private final TransactionService transactionService;
@@ -106,12 +109,13 @@ public class TransactionController {
      * Get transactions for a specific month and year.
      *
      * @param month Month (1-12)
-     * @param year Year
+     * @param year Year (1900-2100)
      * @return List of transactions
      */
     @GetMapping("/month")
     public ResponseEntity<List<TransactionDTO>> getTransactionsByMonth(
-            @RequestParam int month, @RequestParam int year) {
+            @RequestParam @Min(value = 1, message = "Month must be between 1 and 12") @Max(value = 12, message = "Month must be between 1 and 12") int month, 
+            @RequestParam @Min(value = 1900, message = "Year must be between 1900 and 2100") @Max(value = 2100, message = "Year must be between 1900 and 2100") int year) {
         log.info("Fetching transactions for month: {}, year: {}", month, year);
         List<Transaction> transactions = transactionService.getTransactionsByMonth(month, year);
         List<TransactionDTO> dtos = transactions.stream()
@@ -154,25 +158,47 @@ public class TransactionController {
     /**
      * Get monthly totals for a specific year.
      *
-     * @param year Year
+     * @param year Year (1900-2100)
      * @return Map of month to total amount
      */
     @GetMapping("/monthly-totals")
-    public ResponseEntity<Map<Integer, BigDecimal>> getMonthlyTotals(@RequestParam int year) {
+    public ResponseEntity<Map<Integer, BigDecimal>> getMonthlyTotals(
+            @RequestParam @Min(value = 1900, message = "Year must be between 1900 and 2100") @Max(value = 2100, message = "Year must be between 1900 and 2100") int year) {
         log.info("Calculating monthly totals for year: {}", year);
         Map<Integer, BigDecimal> monthlyTotals = transactionService.calculateMonthlyTotals(year);
         return ResponseEntity.ok(monthlyTotals);
     }
 
     /**
-     * Get totals by category.
+     * Get totals by category, optionally filtered by month and year.
      *
+     * @param month Optional month (1-12)
+     * @param year Optional year (1900-2100)
      * @return Map of category to total amount
      */
     @GetMapping("/category-totals")
-    public ResponseEntity<Map<String, BigDecimal>> getCategoryTotals() {
-        log.info("Calculating totals by category");
-        Map<String, BigDecimal> categoryTotals = transactionService.calculateTotalsByCategory();
+    public ResponseEntity<Map<String, BigDecimal>> getCategoryTotals(
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+        
+        // Manual validation for month
+        if (month != null && (month < 1 || month > 12)) {
+            log.warn("Invalid month parameter: {}", month);
+            throw new IllegalArgumentException("Month must be between 1 and 12");
+        }
+        
+        // Manual validation for year
+        if (year != null && (year < 1900 || year > 2100)) {
+            log.warn("Invalid year parameter: {}", year);
+            throw new IllegalArgumentException("Year must be between 1900 and 2100");
+        }
+        
+        if (month != null && year != null) {
+            log.info("Calculating totals by category for month: {}, year: {}", month, year);
+        } else {
+            log.info("Calculating totals by category for all transactions");
+        }
+        Map<String, BigDecimal> categoryTotals = transactionService.calculateTotalsByCategory(month, year);
         return ResponseEntity.ok(categoryTotals);
     }
 

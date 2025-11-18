@@ -20,11 +20,24 @@ spec:
     {{- end }}
   {{- end }}
   rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ .service.name }}
+                port:
+                  number: {{ .service.port }}
+          {{- end }}
+    {{- end }}
+    {{- if not .Values.ingress.hosts }}
+    # Fallback for wildcard host if no specific hosts configured
     - http:
         paths:
-          # Rule 1: Most specific path comes first.
-          # Any request starting with /api/ will be sent to the backend.
-          # The full path (e.g., /api/transactions) is preserved.
           - path: /api
             pathType: Prefix
             backend:
@@ -32,10 +45,6 @@ spec:
                 name: backend-service
                 port:
                   number: 8081
-
-          # Rule 2: The "catch-all" rule for the frontend comes last.
-          # Any other request (e.g., /, /about, /static/css/main.css)
-          # will be sent to the frontend service.
           - path: /
             pathType: Prefix
             backend:
@@ -43,4 +52,5 @@ spec:
                 name: frontend-service
                 port:
                   number: 80
+    {{- end }}
 {{- end }}
