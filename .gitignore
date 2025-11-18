@@ -34,3 +34,24 @@ bin/
 /frontend/build/styles.css
 /frontend/node_modules/
 /backend/target/
+
+### Environment and Configuration ###
+.env
+.env.local
+.env.production
+.env.staging
+
+### Database Files ###
+/backend/data/
+/data/
+*.mv.db
+*.trace.db
+
+### Log Files ###
+*.log
+/backend/*.log
+/frontend/*.log
+
+### Testing Scripts ###
+validation-test.sh
+test-*.sh

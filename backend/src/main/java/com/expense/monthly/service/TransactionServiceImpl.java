@@ -142,11 +142,38 @@ public class TransactionServiceImpl implements TransactionService {
      */
     @Override
     public Map<String, BigDecimal> calculateTotalsByCategory() {
-        log.info("Calculating totals by category");
+        return calculateTotalsByCategory(null, null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Map<String, BigDecimal> calculateTotalsByCategory(Integer month, Integer year) {
+        if (month != null && year != null) {
+            log.info("Calculating totals by category for month: {}, year: {}", month, year);
+        } else {
+            log.info("Calculating totals by category for all transactions");
+        }
+        
         Map<String, BigDecimal> categoryTotals = new HashMap<>();
 
-        // Get all transactions and group by category
-        List<Transaction> transactions = getAllTransactions();
+        // Get transactions based on month/year filter
+        List<Transaction> transactions;
+        if (month != null && year != null) {
+            // Filter by specific month and year
+            transactions = getTransactionsByMonth(month, year);
+        } else if (year != null) {
+            // Filter by entire year (all months in that year)
+            transactions = getAllTransactions().stream()
+                    .filter(t -> t.getDate().getYear() == year) // LocalDate.getYear() returns the actual year
+                    .collect(java.util.stream.Collectors.toList());
+        } else {
+            // No filter - get all transactions
+            transactions = getAllTransactions();
+        }
+
+        // Group by category and calculate totals
         Map<String, List<Transaction>> transactionsByCategory = transactions.stream()
                 .collect(Collectors.groupingBy(transaction -> transaction.getCategory().toLowerCase()));
 

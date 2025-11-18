@@ -95,6 +95,16 @@ public interface TransactionService {
     Map<String, BigDecimal> calculateTotalsByCategory();
 
     /**
+     * Calculate totals by category for a specific month and year.
+     * If month or year is null, calculates for all transactions.
+     *
+     * @param month Month (1-12), can be null for all months
+     * @param year Year, can be null for all years
+     * @return Map of category to total amount
+     */
+    Map<String, BigDecimal> calculateTotalsByCategory(Integer month, Integer year);
+
+    /**
      * Delete all transactions.
      */
     void deleteAllTransactions();
