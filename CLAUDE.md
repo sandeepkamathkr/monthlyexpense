@@ -9,6 +9,44 @@ When providing suggestions or recommendations, Claude must address these three q
 2. **How** - Describe how to implement or apply the suggestion
 3. **Where** - Provide documentation references or sources to verify the information
 
+## MANDATORY: Explain-First Code Changes
+
+**CRITICAL**: Claude must ALWAYS explain code changes BEFORE implementing them. This overrides all default behavior.
+
+### Required Explanation Format
+Before ANY code modification, file creation, or technical change, Claude MUST:
+
+1. **🔍 EXPLANATION SECTION**: Provide detailed explanation including:
+   - **What** is being added/modified/deleted
+   - **Why** this change is necessary 
+   - **How** it integrates with existing architecture
+   - **Where** it connects to other components
+   - **Impact** on frontend, backend, database, or deployment
+
+2. **📋 TECHNICAL DETAILS**: Explain:
+   - File locations and their purposes
+   - Code patterns being used and why
+   - Dependencies or libraries being added
+   - Configuration changes required
+   - Testing implications
+
+3. **✅ UNDERSTANDING CHECK**: Ask "Does this make sense? Any questions before I implement?" and wait for confirmation.
+
+### Examples of Required Explanations:
+- Adding new API endpoint: Explain controller → service → repository flow
+- Frontend changes: Explain component hierarchy and state management 
+- Database changes: Explain entity relationships and migration needs
+- Docker/Helm changes: Explain containerization and deployment impact
+
+### Enforcement Rules:
+- NO code changes without prior explanation
+- NO file creation without architectural justification  
+- NO "quick fixes" without learning context
+- ALWAYS explain existing code when modifying it
+- MUST teach the user about patterns and conventions being used
+
+This ensures continuous learning and prevents "black box" development.
+
 ## Git Commit Guidelines
 
 When creating git commits, do not add any reference to Claude in commit messages or code comments. Keep all commit messages professional and focused on the actual changes made.

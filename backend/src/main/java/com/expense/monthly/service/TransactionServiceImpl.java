@@ -3,6 +3,7 @@ package com.expense.monthly.service;
 import com.expense.monthly.dto.TransactionDTO;
 import com.expense.monthly.model.Transaction;
 import com.expense.monthly.repository.TransactionRepository;
+import com.expense.monthly.util.CurrencyUtil;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import lombok.RequiredArgsConstructor;
@@ -61,8 +62,15 @@ public class TransactionServiceImpl implements TransactionService {
      */
     @Override
     @Transactional
-    public List<Transaction> processCSVFile(MultipartFile file) throws IOException {
-        log.info("Processing CSV file: {}", file.getOriginalFilename());
+    public List<Transaction> processCSVFile(MultipartFile file, String currency) throws IOException {
+        log.info("Processing CSV file: {} with currency: {}", file.getOriginalFilename(), currency);
+        
+        // Validate the provided currency
+        if (!CurrencyUtil.isValidCurrency(currency)) {
+            throw new IllegalArgumentException("INVALID_CURRENCY: Invalid currency code: " + currency + 
+                ". Supported currencies are: " + String.join(", ", CurrencyUtil.SUPPORTED_CURRENCIES));
+        }
+        
         try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             CsvToBean<TransactionDTO> csvToBean = new CsvToBeanBuilder<TransactionDTO>(reader)
                     .withType(TransactionDTO.class)
@@ -70,9 +78,28 @@ public class TransactionServiceImpl implements TransactionService {
                     .build();
 
             List<TransactionDTO> transactions = csvToBean.parse();
-            log.info("Parsed {} transactions from CSV", transactions.size());
+            
+            // Apply the provided currency to all transactions (CSV should only have Date, Description, Amount, Category)
+            for (TransactionDTO dto : transactions) {
+                dto.setCurrency(currency.toUpperCase().trim());
+            }
+            
+            log.info("Parsed {} transactions from CSV and applied currency: {}", transactions.size(), currency);
             return saveTransactions(transactions);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getPrimaryCurrency() {
+        log.info("Getting primary currency from existing transactions");
+        List<Transaction> transactions = transactionRepository.findAll();
+        if (transactions.isEmpty()) {
+            return null;
+        }
+        return transactions.get(0).getCurrency();
     }
 
     /**

@@ -39,15 +39,17 @@ public class TransactionController {
      * @return List of processed transactions
      */
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadCSVFile(@RequestParam("file") MultipartFile file) {
-        log.info("Received file upload request: {}", file.getOriginalFilename());
+    public ResponseEntity<?> uploadCSVFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("currency") String currency) {
+        log.info("Received file upload request: {} with currency: {}", file.getOriginalFilename(), currency);
 
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("Please select a CSV file to upload.");
         }
 
         try {
-            List<Transaction> savedTransactions = transactionService.processCSVFile(file);
+            List<Transaction> savedTransactions = transactionService.processCSVFile(file, currency);
             List<TransactionDTO> dtos = savedTransactions.stream()
                     .map(TransactionDTO::fromEntity)
                     .collect(Collectors.toList());
@@ -60,12 +62,36 @@ public class TransactionController {
             return ResponseEntity.ok(response);
         } catch (IOException e) {
             log.error("Failed to process CSV file", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to process CSV file: " + e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "UPLOAD_FAILED");
+            errorResponse.put("message", "Failed to process CSV file: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        } catch (IllegalArgumentException e) {
+            log.error("Validation error processing file", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            
+            String errorMessage = e.getMessage();
+            if (errorMessage.startsWith("MIXED_CURRENCIES_IN_CSV:")) {
+                errorResponse.put("error", "MIXED_CURRENCIES_IN_CSV");
+                errorResponse.put("message", errorMessage.substring("MIXED_CURRENCIES_IN_CSV:".length()).trim());
+            } else if (errorMessage.startsWith("CURRENCY_MISMATCH:")) {
+                errorResponse.put("error", "CURRENCY_MISMATCH");
+                errorResponse.put("message", errorMessage.substring("CURRENCY_MISMATCH:".length()).trim());
+            } else if (errorMessage.startsWith("INVALID_CURRENCY:")) {
+                errorResponse.put("error", "INVALID_CURRENCY");
+                errorResponse.put("message", errorMessage.substring("INVALID_CURRENCY:".length()).trim());
+            } else {
+                errorResponse.put("error", "VALIDATION_ERROR");
+                errorResponse.put("message", errorMessage);
+            }
+            
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         } catch (Exception e) {
             log.error("Error processing file", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error processing file: " + e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "INTERNAL_ERROR");
+            errorResponse.put("message", "Error processing file: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
@@ -200,6 +226,20 @@ public class TransactionController {
         }
         Map<String, BigDecimal> categoryTotals = transactionService.calculateTotalsByCategory(month, year);
         return ResponseEntity.ok(categoryTotals);
+    }
+
+    /**
+     * Get the primary currency from existing transactions.
+     *
+     * @return Primary currency or null if no transactions exist
+     */
+    @GetMapping("/primary-currency")
+    public ResponseEntity<Map<String, String>> getPrimaryCurrency() {
+        log.info("Getting primary currency");
+        String primaryCurrency = transactionService.getPrimaryCurrency();
+        Map<String, String> response = new HashMap<>();
+        response.put("primaryCurrency", primaryCurrency);
+        return ResponseEntity.ok(response);
     }
 
     /**

@@ -5,13 +5,54 @@ import './styles.css';
 // API base URL - change this to match your backend URL in production
 const API_BASE_URL = '/api/transactions';
 
-// Utility function to format currency
-const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
+1// Utility function to format currency with proper symbols
+const formatCurrency = (amount, currency = 'AUD') => {
+    // For Australian users, prioritize symbol display over locale consistency
+    const currencyLocaleMap = {
+        'AUD': 'en-AU',  // A$100.00
+        'USD': 'en-US',  // $100.00 (instead of USD 100.00)
+        'EUR': 'en-US',  // €100.00 (instead of EUR 100.00) 
+        'GBP': 'en-GB',  // £100.00 (instead of GBP 100.00)
+        'INR': 'en-IN',  // ₹100.00 (instead of INR 100.00)
+        'JPY': 'ja-JP',  // ¥100 (instead of JPY 100.00)
+        'CAD': 'en-CA',  // CA$100.00 (instead of CAD 100.00)
+        'CHF': 'de-CH',  // CHF 100.00 (Swiss formatting)
+        'CNY': 'zh-CN',  // ¥100.00 (instead of CNY 100.00)
+        'KRW': 'ko-KR'   // ₩100 (instead of KRW 100.00)
+    };
+    
+    const locale = currencyLocaleMap[currency] || 'en-US';
+    
+    return new Intl.NumberFormat(locale, {
         style: 'currency',
-        currency: 'USD'
+        currency: currency
     }).format(amount);
 };
+
+// Currency utilities
+const getCurrencySymbol = (currency = 'AUD') => {
+    try {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency
+        }).formatToParts(0).find(part => part.type === 'currency').value;
+    } catch (error) {
+        return currency;
+    }
+};
+
+const SUPPORTED_CURRENCIES = [
+    { code: 'USD', name: 'US Dollar', symbol: '$' },
+    { code: 'EUR', name: 'Euro', symbol: '€' },
+    { code: 'GBP', name: 'British Pound', symbol: '£' },
+    { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
+    { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
+    { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
+    { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF' },
+    { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
+    { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+    { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' }
+];
 
 // Utility function to format date
 const formatDate = (dateString) => {
@@ -29,6 +70,30 @@ const FileUpload = ({onUploadSuccess}) => {
     const [isUploading, setIsUploading] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [modalError, setModalError] = useState(null);
+    const [selectedCurrency, setSelectedCurrency] = useState('USD');
+    const [primaryCurrency, setPrimaryCurrency] = useState(null);
+    const [isLoadingCurrency, setIsLoadingCurrency] = useState(true);
+
+    // Load primary currency when component mounts
+    useEffect(() => {
+        const loadPrimaryCurrency = async () => {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/primary-currency`);
+                const currency = response.data.primaryCurrency;
+                setPrimaryCurrency(currency);
+                if (currency) {
+                    setSelectedCurrency(currency);
+                }
+            } catch (error) {
+                console.error('Error loading primary currency:', error);
+            } finally {
+                setIsLoadingCurrency(false);
+            }
+        };
+        loadPrimaryCurrency();
+    }, []);
 
     const handleFileChange = (event) => {
         setSelectedFile(event.target.files[0]);
@@ -44,6 +109,7 @@ const FileUpload = ({onUploadSuccess}) => {
 
         const formData = new FormData();
         formData.append('file', selectedFile);
+        formData.append('currency', selectedCurrency);
 
         setIsUploading(true);
         setMessage('');
@@ -65,17 +131,63 @@ const FileUpload = ({onUploadSuccess}) => {
             }
         } catch (error) {
             console.error('Error uploading file:', error);
-            setError(error.response?.data || 'Error uploading file. Please try again.');
+            
+            // Check if it's a structured error response
+            if (error.response?.data && typeof error.response.data === 'object' && error.response.data.error) {
+                const errorData = error.response.data;
+                
+                if (errorData.error === 'CURRENCY_MISMATCH' || errorData.error === 'MIXED_CURRENCIES_IN_CSV' || errorData.error === 'INVALID_CURRENCY') {
+                    // Show modal for currency-related errors
+                    setModalError({
+                        type: errorData.error,
+                        message: errorData.message
+                    });
+                    setShowErrorModal(true);
+                } else {
+                    // Show regular error for other validation errors
+                    setError(errorData.message || 'Validation error occurred. Please check your file.');
+                }
+            } else {
+                // Handle non-structured error responses
+                const errorMessage = typeof error.response?.data === 'string' 
+                    ? error.response.data 
+                    : 'Error uploading file. Please try again.';
+                setError(errorMessage);
+            }
         } finally {
             setIsUploading(false);
         }
+    };
+
+    const handleResetFromModal = async () => {
+        if (window.confirm('Are you sure you want to reset all data? This action cannot be undone.')) {
+            try {
+                await axios.delete(`${API_BASE_URL}/reset`);
+                setShowErrorModal(false);
+                setModalError(null);
+                setMessage('Database reset successfully. You can now upload your new CSV file.');
+                
+                // Notify parent to reload data
+                if (onUploadSuccess) {
+                    onUploadSuccess();
+                }
+            } catch (error) {
+                console.error('Error resetting data:', error);
+                setError('Failed to reset database. Please try again.');
+            }
+        }
+    };
+
+    const handleCloseModal = () => {
+        setShowErrorModal(false);
+        setModalError(null);
     };
 
     return (
         <div className="card">
             <div className="card-header">Upload Transaction CSV</div>
             <div className="card-body">
-                <div className="form-group">
+                <div className="form-group mb-3">
                     <label htmlFor="file" className="form-label">Select CSV File</label>
                     <input
                         type="file"
@@ -85,20 +197,134 @@ const FileUpload = ({onUploadSuccess}) => {
                         onChange={handleFileChange}
                     />
                     <small className="form-text text-muted">
-                        CSV should have columns: Date, Description, Amount, Category
+                        CSV should have columns: Date, Description, Amount, Category (no Currency column needed)
                     </small>
+                </div>
+
+                <div className="form-group mb-3">
+                    <label htmlFor="currency" className="form-label">
+                        Currency {primaryCurrency ? '(Set by existing transactions)' : '(Select for new transactions)'}
+                    </label>
+                    {isLoadingCurrency ? (
+                        <div className="text-muted">Loading currency...</div>
+                    ) : (
+                        <select
+                            id="currency"
+                            className="form-select"
+                            value={selectedCurrency}
+                            onChange={(e) => setSelectedCurrency(e.target.value)}
+                            disabled={!!primaryCurrency}
+                        >
+                            {SUPPORTED_CURRENCIES.map(currency => (
+                                <option key={currency.code} value={currency.code}>
+                                    {currency.code} - {currency.name} ({currency.symbol})
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                    {primaryCurrency && (
+                        <small className="form-text text-muted">
+                            Currency is locked to {primaryCurrency} based on existing transactions. Reset database to change.
+                        </small>
+                    )}
+                    {!primaryCurrency && (
+                        <small className="form-text text-muted">
+                            This will be the primary currency for all future uploads.
+                        </small>
+                    )}
                 </div>
 
                 <button
                     className="btn btn-primary"
                     onClick={handleUpload}
-                    disabled={!selectedFile || isUploading}
+                    disabled={!selectedFile || isUploading || isLoadingCurrency}
                 >
                     {isUploading ? 'Uploading...' : 'Upload'}
                 </button>
 
                 {message && <div className="alert alert-success mt-3">{message}</div>}
                 {error && <div className="alert alert-danger mt-3">{error}</div>}
+            </div>
+            
+            <ErrorModal 
+                show={showErrorModal}
+                onClose={handleCloseModal}
+                error={modalError}
+                onReset={handleResetFromModal}
+            />
+        </div>
+    );
+};
+
+// Error Modal Component
+const ErrorModal = ({ show, onClose, error, onReset }) => {
+    if (!show) return null;
+
+    const isCurrencyMismatch = error?.type === 'CURRENCY_MISMATCH';
+    const isMixedCurrencies = error?.type === 'MIXED_CURRENCIES_IN_CSV';
+    const isInvalidCurrency = error?.type === 'INVALID_CURRENCY';
+
+    return (
+        <div className="modal" tabIndex="-1" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
+            <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                    <div className="modal-header bg-danger text-white">
+                        <h5 className="modal-title">
+                            <i className="bi bi-exclamation-triangle me-2"></i>
+                            {isCurrencyMismatch ? 'Currency Mismatch' : 
+                             isMixedCurrencies ? 'Mixed Currencies Detected' : 
+                             isInvalidCurrency ? 'Invalid Currency Code' : 'Upload Error'}
+                        </h5>
+                    </div>
+                    <div className="modal-body">
+                        <div className="text-center mb-3">
+                            <i className="bi bi-currency-exchange fs-1 text-danger"></i>
+                        </div>
+                        <p className="text-center mb-3">
+                            {error?.message || 'An error occurred during file upload.'}
+                        </p>
+                        
+                        {isCurrencyMismatch && (
+                            <div className="alert alert-warning">
+                                <i className="bi bi-info-circle me-2"></i>
+                                <strong>Solution:</strong> To upload transactions with a different currency, 
+                                you must first reset the database to clear all existing transactions.
+                            </div>
+                        )}
+                        
+                        {isMixedCurrencies && (
+                            <div className="alert alert-info">
+                                <i className="bi bi-info-circle me-2"></i>
+                                <strong>Required:</strong> All transactions in a single CSV file must use 
+                                the same currency. Please ensure your CSV contains only one currency.
+                            </div>
+                        )}
+                        
+                        {isInvalidCurrency && (
+                            <div className="alert alert-info">
+                                <i className="bi bi-info-circle me-2"></i>
+                                <strong>Required:</strong> Please use only valid ISO 4217 currency codes. 
+                                Check your CSV file for any typos in the Currency column.
+                            </div>
+                        )}
+                    </div>
+                    <div className="modal-footer">
+                        {isCurrencyMismatch && (
+                            <button 
+                                type="button" 
+                                className="btn btn-warning me-2" 
+                                onClick={onReset}
+                            >
+                                <i className="bi bi-arrow-counterclockwise me-1"></i>
+                                Reset Database
+                            </button>
+                        )}
+                        <button type="button" className="btn btn-secondary" onClick={onClose}>
+                            <i className="bi bi-x-circle me-1"></i>
+                            Close
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
@@ -144,8 +370,9 @@ const CategoryTransactionsModal = ({show, onClose, category, transactions}) => {
             return 0;
         });
 
-    // Calculate total amount for this category
+    // Calculate total amount for this category and get primary currency
     const categoryTotal = filteredTransactions.reduce((sum, transaction) => sum + transaction.amount, 0);
+    const primaryCurrency = filteredTransactions.length > 0 ? filteredTransactions[0].currency : 'AUD';
 
     return (
         <div className="modal" tabIndex="-1" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
@@ -164,7 +391,7 @@ const CategoryTransactionsModal = ({show, onClose, category, transactions}) => {
                         <div className="d-flex flex-column align-items-end">
                             <button type="button" className="btn-close" onClick={onClose}></button>
                             <div className="category-total mt-1">
-                                Total: <span className="fw-bold">{formatCurrency(categoryTotal)}</span>
+                                Total: <span className="fw-bold">{formatCurrency(categoryTotal, primaryCurrency)}</span>
                             </div>
                         </div>
                     </div>
@@ -219,7 +446,7 @@ const CategoryTransactionsModal = ({show, onClose, category, transactions}) => {
                                         <tr key={index} className="transaction-row">
                                             <td className="date-cell">{formatDate(transaction.date)}</td>
                                             <td className="description-cell">{transaction.description}</td>
-                                            <td className="amount-cell">{formatCurrency(transaction.amount)}</td>
+                                            <td className="amount-cell">{formatCurrency(transaction.amount, transaction.currency)}</td>
                                         </tr>
                                     ))
                                 )}
@@ -321,6 +548,21 @@ const CategoryTotalsTable = ({categoryTotals, transactions, selectedMonth, selec
     const [sortField, setSortField] = useState('amount');
     const [sortDirection, setSortDirection] = useState('desc');
     const [hoveredCategory, setHoveredCategory] = useState(null);
+
+    // Get primary currency from transactions
+    const getPrimaryCurrency = (transactions) => {
+        if (!transactions || transactions.length === 0) return 'AUD';
+        const currencyCount = {};
+        transactions.forEach(transaction => {
+            const currency = transaction.currency || 'AUD';
+            currencyCount[currency] = (currencyCount[currency] || 0) + 1;
+        });
+        return Object.keys(currencyCount).reduce((a, b) => 
+            currencyCount[a] > currencyCount[b] ? a : b
+        );
+    };
+    
+    const primaryCurrency = getPrimaryCurrency(transactions);
 
     const handleCategoryClick = (category) => {
         setSelectedCategory(category);
@@ -440,7 +682,7 @@ const CategoryTotalsTable = ({categoryTotals, transactions, selectedMonth, selec
                 <div className="total-summary">
                     <span className="total-label">Total:</span>
                     <span className="badge bg-primary rounded-pill total-badge">
-                        {formatCurrency(totalOfAllCategories)}
+                        {formatCurrency(totalOfAllCategories, primaryCurrency)}
                     </span>
                 </div>
             </div>
@@ -520,7 +762,7 @@ const CategoryTotalsTable = ({categoryTotals, transactions, selectedMonth, selec
                                             <i className="bi bi-box-arrow-up-right ms-2 click-icon"></i>
                                         </div>
                                     </td>
-                                    <td className="amount-cell">{formatCurrency(amount)}</td>
+                                    <td className="amount-cell">{formatCurrency(amount, primaryCurrency)}</td>
                                     <td className="percentage-cell">
                                         <div className="d-flex align-items-center">
                                             <div className="progress flex-grow-1 me-2">
@@ -699,7 +941,7 @@ const TransactionsTable = ({transactions}) => {
                             <tr key={index}>
                                 <td>{formatDate(transaction.date)}</td>
                                 <td>{transaction.description}</td>
-                                <td>{formatCurrency(transaction.amount)}</td>
+                                <td>{formatCurrency(transaction.amount, transaction.currency)}</td>
                                 <td>{transaction.category}</td>
                             </tr>
                         ))
@@ -712,12 +954,12 @@ const TransactionsTable = ({transactions}) => {
 };
 
 // Summary Component
-const Summary = ({totalAmount, monthlyTotals}) => {
+const Summary = ({totalAmount, monthlyTotals, primaryCurrency = 'AUD'}) => {
     return (
         <div className="summary-container mb-4">
             <div className="summary-card">
                 <div className="summary-title">Total Spending</div>
-                <div className="summary-value">{formatCurrency(totalAmount || 0)}</div>
+                <div className="summary-value">{formatCurrency(totalAmount || 0, primaryCurrency)}</div>
             </div>
 
             {monthlyTotals && Object.entries(monthlyTotals).map(([month, amount]) => (
@@ -725,7 +967,7 @@ const Summary = ({totalAmount, monthlyTotals}) => {
                     <div className="summary-title">
                         {new Date(0, month - 1).toLocaleString('default', {month: 'long'})}
                     </div>
-                    <div className="summary-value">{formatCurrency(amount)}</div>
+                    <div className="summary-value">{formatCurrency(amount, primaryCurrency)}</div>
                 </div>
             ))}
         </div>
@@ -733,7 +975,7 @@ const Summary = ({totalAmount, monthlyTotals}) => {
 };
 
 // Spending By Category Component (Stable Chart.js Implementation)
-const SpendingByCategory = ({categoryTotals}) => {
+const SpendingByCategory = ({categoryTotals, primaryCurrency = 'AUD'}) => {
     const chartRef = useRef(null);
     const chartInstanceRef = useRef(null);
     const [chartError, setChartError] = useState(false);
@@ -795,7 +1037,7 @@ const SpendingByCategory = ({categoryTotals}) => {
                             tooltip: {
                                 callbacks: {
                                     label: function(context) {
-                                        return formatCurrency(context.raw);
+                                        return formatCurrency(context.raw, primaryCurrency);
                                     }
                                 }
                             }
@@ -805,7 +1047,7 @@ const SpendingByCategory = ({categoryTotals}) => {
                                 beginAtZero: true,
                                 ticks: {
                                     callback: function(value) {
-                                        return formatCurrency(value);
+                                        return formatCurrency(value, primaryCurrency);
                                     }
                                 }
                             },
@@ -893,7 +1135,7 @@ const SpendingByCategory = ({categoryTotals}) => {
                             <div key={category} className="col-12">
                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                     <span className="fw-medium text-truncate" style={{maxWidth: '70%'}}>{category}</span>
-                                    <span className="badge bg-primary rounded-pill">{formatCurrency(amount)}</span>
+                                    <span className="badge bg-primary rounded-pill">{formatCurrency(amount, primaryCurrency)}</span>
                                 </div>
                                 <div className="progress" style={{height: '8px'}}>
                                     <div 
@@ -991,6 +1233,23 @@ const App = () => {
                 setError('Failed to load category totals. Please try again.');
             }
         }
+    };
+
+    // Determine primary currency from transactions
+    const getPrimaryCurrency = (transactions) => {
+        if (!transactions || transactions.length === 0) return 'AUD';
+        
+        // Count occurrences of each currency
+        const currencyCount = {};
+        transactions.forEach(transaction => {
+            const currency = transaction.currency || 'AUD';
+            currencyCount[currency] = (currencyCount[currency] || 0) + 1;
+        });
+        
+        // Return the most frequent currency
+        return Object.keys(currencyCount).reduce((a, b) => 
+            currencyCount[a] > currencyCount[b] ? a : b
+        );
     };
 
     // Load data from API
@@ -1095,7 +1354,11 @@ const App = () => {
                 </div>
             </div>
 
-            <Summary totalAmount={totalAmount} monthlyTotals={monthlyTotals} />
+            <Summary 
+                totalAmount={totalAmount} 
+                monthlyTotals={monthlyTotals} 
+                primaryCurrency={getPrimaryCurrency(transactions)}
+            />
 
             <div className="row">
                 <div className="col-md-6">
@@ -1104,7 +1367,10 @@ const App = () => {
                     </CollapsibleCard>
 
                     <CollapsibleCard title="📈 Spending by Category" defaultExpanded={true}>
-                        <SpendingByCategory categoryTotals={categoryTotals} />
+                        <SpendingByCategory 
+                            categoryTotals={categoryTotals} 
+                            primaryCurrency={getPrimaryCurrency(transactions)}
+                        />
                     </CollapsibleCard>
                 </div>
 
