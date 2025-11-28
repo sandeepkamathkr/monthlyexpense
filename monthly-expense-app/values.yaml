@@ -32,21 +32,3 @@ postgresql:
       size: 8Gi
 ingress:
   enabled: true
-  hosts:
-    - host: expense-tracker.yourdomain.com
-      paths:
-        - path: /api
-          pathType: Prefix
-          service:
-            name: backend-service
-            port: 8081
-        - path: /
-          pathType: Prefix
-          service:
-            name: frontend-service
-            port: 80
-  # Optional: Enable TLS/HTTPS
-  tls:
-    - secretName: expense-tracker-tls
-      hosts:
-        - expense-tracker.yourdomain.com
