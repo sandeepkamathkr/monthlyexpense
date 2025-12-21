@@ -15,5 +15,5 @@ COPY target/*.jar app.jar
 # This should match the server.port in your application.properties
 EXPOSE 8081
 
-# Run the JAR file
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+# Run the JAR file with Docker profile
+ENTRYPOINT ["java","-jar","/app/app.jar","--spring.profiles.active=docker"]

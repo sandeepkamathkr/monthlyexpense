@@ -47,6 +47,12 @@ public class Transaction {
     private BigDecimal amount;
 
     /**
+     * Currency code for the transaction (e.g., USD, EUR, GBP).
+     */
+    @Column(nullable = false, length = 3)
+    private String currency;
+
+    /**
      * Category of the transaction.
      */
     @Column(nullable = false)

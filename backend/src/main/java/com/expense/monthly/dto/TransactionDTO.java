@@ -40,6 +40,13 @@ public class TransactionDTO {
     private BigDecimal amount;
 
     /**
+     * Currency code for the transaction (e.g., USD, EUR, GBP).
+     * If not provided in CSV, defaults to USD.
+     */
+    @CsvBindByName(column = "Currency", required = false)
+    private String currency;
+
+    /**
      * Category of the transaction.
      */
     @CsvBindByName(column = "Category", required = true)
@@ -55,6 +62,7 @@ public class TransactionDTO {
                 .date(this.date)
                 .description(this.description)
                 .amount(this.amount)
+                .currency(this.currency != null ? this.currency.toUpperCase() : "AUD")
                 .category(this.category)
                 .build();
     }
@@ -70,6 +78,7 @@ public class TransactionDTO {
                 transaction.getDate(),
                 transaction.getDescription(),
                 transaction.getAmount(),
+                transaction.getCurrency(),
                 transaction.getCategory()
         );
     }

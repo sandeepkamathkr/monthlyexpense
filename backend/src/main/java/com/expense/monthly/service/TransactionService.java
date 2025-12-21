@@ -35,10 +35,18 @@ public interface TransactionService {
      * Process and save transactions from a CSV file.
      *
      * @param file CSV file
+     * @param currency Currency to apply to all transactions
      * @return List of saved transactions
      * @throws IOException If file processing fails
      */
-    List<Transaction> processCSVFile(MultipartFile file) throws IOException;
+    List<Transaction> processCSVFile(MultipartFile file, String currency) throws IOException;
+    
+    /**
+     * Get the primary currency from existing transactions.
+     *
+     * @return Primary currency if transactions exist, null otherwise
+     */
+    String getPrimaryCurrency();
 
     /**
      * Get all transactions.
