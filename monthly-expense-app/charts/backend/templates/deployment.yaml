@@ -45,23 +45,23 @@ spec:
           # CODE QUALITY: Increased initial delay for liveness.
           # This gives a Spring Boot app more time to start before being
           # considered "dead" and restarted.
-            initialDelaySeconds: 45
-            periodSeconds: 15
-            timeoutSeconds: 1
-            failureThreshold: 3
+            initialDelaySeconds: 90
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
           readinessProbe:
             # CODE QUALITY: Corrected httpGet syntax.
             httpGet:
               path: /actuator/health/readiness
               port: http # Use the name of the port defined above
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            timeoutSeconds: 1
-            failureThreshold: 3
-      resources:
-        requests:
-           cpu: 100m
-           memory: 128Mi
-        limits:
-           cpu: 100m
-           memory: 128Mi
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi

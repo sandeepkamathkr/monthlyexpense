@@ -13,6 +13,6 @@ dependencies:
     version: "0.1.0"
     repository: "file://charts/frontend"
   - name: postgresql
-    version: "14.2.2" # Use a recent, stable version
+    version: "18.1.15" # Use the latest stable version
     repository: "https://charts.bitnami.com/bitnami"
     alias: postgresql # An optional alias
