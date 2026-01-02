@@ -10,4 +10,7 @@ spec:
       port: {{ .Values.service.port }}
       targetPort: http
       name: http
+      {{- if .Values.service.nodePort }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
   type: {{ .Values.service.type }}

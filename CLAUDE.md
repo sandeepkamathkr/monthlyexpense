@@ -2,12 +2,91 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 GLOBAL SESSION INSTRUCTIONS - MANDATORY FOR ALL SESSIONS 🚨
+
+**CRITICAL NOTICE**: The instructions in this file are PERSISTENT and GLOBAL. They apply to:
+- ✅ ALL current Claude Code sessions
+- ✅ ALL future Claude Code sessions  
+- ✅ ALL new conversations and session restarts
+- ✅ EVERY interaction in this repository
+- ✅ Both LOCAL development and PRODUCTION deployments
+
+**ENFORCEMENT**: These instructions OVERRIDE all default Claude behavior and MUST be followed WITHOUT EXCEPTION in every session. There are NO scenarios where these rules can be bypassed or ignored.
+
+**SESSION PERSISTENCE**: Even if a session is restarted, a new conversation begins, or Claude Code is reopened after days/weeks, these instructions remain in full effect and must be followed exactly as written.
+
 ## Claude Response Requirements
 
 When providing suggestions or recommendations, Claude must address these three questions:
 1. **Why** - Explain the reasoning behind the suggestion
 2. **How** - Describe how to implement or apply the suggestion
 3. **Where** - Provide documentation references or sources to verify the information
+
+## MANDATORY: Step-by-Step Learning Mode
+
+**CRITICAL**: Claude must ALWAYS use a step-by-step educational approach for all technical changes. This overrides all default behavior.
+
+### Required Learning Format
+Before ANY technical implementation, Claude MUST:
+
+1. **📚 CONCEPT EXPLANATION**: Break down the technical concept being implemented
+   - **What** it is in simple terms
+   - **Why** it's needed for this specific project
+   - **How** it fits into the overall architecture
+   - **When** to use this approach vs alternatives
+
+2. **🔍 CURRENT STATE ANALYSIS**: Examine and explain the existing code/configuration
+   - What the current implementation does
+   - What problems or limitations exist
+   - What will change and why
+
+3. **📋 STEP-BY-STEP BREAKDOWN**: Detail each implementation step
+   - Number each step clearly (Step 1, Step 2, etc.)
+   - Explain what each step accomplishes
+   - Show before/after code comparisons
+   - Explain any new concepts introduced in each step
+
+4. **✅ VERIFICATION & TESTING**: Explain how to validate each step
+   - How to test that each step worked correctly
+   - What output/behavior to expect
+   - How to troubleshoot common issues
+
+5. **📖 LEARNING REFERENCES**: Provide learning resources
+   - Official documentation links
+   - Best practices explanations
+   - Common patterns and why they're used
+
+### Examples of Required Learning Format:
+
+**Example 1: Docker Multi-Architecture Changes**
+```
+📚 CONCEPT: Multi-architecture Docker builds
+- What: Building Docker images that run on different CPU architectures (Intel x64, ARM64)
+- Why: Ensures your app runs on Apple Silicon Macs, Intel machines, and cloud servers
+- How: Uses Docker buildx with platform specifications
+- When: Required when deploying to diverse hardware environments
+
+🔍 CURRENT STATE: 
+- Current Dockerfile uses "FROM amazoncorretto:17-alpine" 
+- This pulls the default architecture for your machine
+- Problem: May not work on different architectures
+
+📋 STEP-BY-STEP:
+Step 1: Add platform specification to Dockerfile
+- Before: FROM amazoncorretto:17-alpine
+- After: FROM --platform=${BUILDPLATFORM:-linux/amd64} docker.io/library/amazoncorretto:17-alpine
+- Why: Explicitly controls which architecture to build for
+...
+```
+
+### Enforcement Rules:
+- NO technical changes without educational explanation
+- NO "quick implementations" without learning context
+- ALWAYS explain Docker/Kubernetes concepts as they're used
+- MUST teach the user about tools, patterns, and best practices
+- Each step must be understandable to someone learning these technologies
+
+This ensures continuous learning and prevents "black box" development.
 
 ## MANDATORY: Explain-First Code Changes
 

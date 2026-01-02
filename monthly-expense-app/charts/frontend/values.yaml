@@ -3,9 +3,10 @@ replicaCount: 1
 image:
   # Replace with your Docker Hub username and image name
   repository: sandeepkamathkr/monthly-expense-frontend
-  tag: 1.2.0
+  tag: 1.2.1
   pullPolicy: Always
 
 service:
-  type: ClusterIP # Exposes the service outside the cluster
+  type: NodePort # Exposes the service outside the cluster
   port: 80
+  nodePort: 30080  # Frontend accessible on port 30080

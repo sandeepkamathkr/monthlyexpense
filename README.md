@@ -16,7 +16,7 @@ A full-stack web application for tracking and analyzing monthly expenses. This a
 
 ## Technology Stack
 
-### Backend (v1.2.0)
+### Backend (v1.3.1)
 - Java 11
 - Spring Boot 2.7.14
 - Spring Data JPA
@@ -24,17 +24,20 @@ A full-stack web application for tracking and analyzing monthly expenses. This a
 - OpenCSV for CSV processing
 - Lombok
 
-### Frontend (v1.1.0)
+### Frontend (v1.2.1)
 - React 18 with modern build system
 - Bootstrap 5
 - Chart.js for data visualization
 - Axios for API calls
 
 ### Infrastructure
-- Docker & Docker Compose
-- Kubernetes with Helm charts
-- nginx for frontend serving
-- nginx ingress controller
+- **Multi-Architecture Docker Images**: Support for AMD64 (Intel/Windows) and ARM64 (Mac M1/M2)
+- **Automated Build Scripts**: Streamlined local development and production release workflows
+- **Registry-Based Deployment**: Automatic platform detection from Docker Hub
+- **Docker & Docker Compose**: Full containerization with PostgreSQL
+- **Kubernetes with Helm charts**: Production-ready orchestration
+- **nginx**: Optimized frontend serving with security headers
+- **nginx ingress controller**: External access and routing
 
 ## Getting Started
 
@@ -42,32 +45,52 @@ A full-stack web application for tracking and analyzing monthly expenses. This a
 - Java 11 or higher
 - Maven 3.6+
 - Node.js 18+ and npm (for frontend development)
-- Docker and Docker Compose
-- Kubernetes cluster (for production deployment)
+- **Docker Desktop** or Docker Engine with buildx (for multi-architecture builds)
+- **Docker Compose** v2.0+
+- **Kubernetes cluster** (Kind, minikube, or cloud provider)
+- **Helm** 3.x (for Kubernetes deployment)
 
 ### Running the Application
 
-#### 🔥 Recommended: Docker Compose (Production-like)
-This is the recommended way to run the full application:
+## 🚀 Quick Start Options
+
+### Option 1: 🔥 **Local Development** (Fastest)
+For daily development with automatic rebuilds:
 
 ```bash
-# 1. Clone the repository
+# 1. Clone and navigate
 git clone <repository-url>
 cd MonthlyExpense
 
-# 2. Build frontend
-cd frontend
-rm -rf build && npx react-scripts build
-rm -rf public/static && cp -r build/* public/
+# 2. Build images for your platform
+./docker-image-scripts/local/build-local.sh
 
-# 3. Build and run all services
-cd ..
-docker-compose up --build
+# 3. Run all services
+docker-compose up
 
 # 4. Access the application
 # Frontend: http://localhost
 # Backend API: http://localhost:8081
 # Database: PostgreSQL on localhost:5432
+```
+
+### Option 2: 🌍 **Multi-Architecture Production** 
+For team sharing and cross-platform compatibility:
+
+```bash
+# 1. Build and push multi-architecture images
+./docker-image-scripts/production/push-multiarch-release.sh \
+  --backend-version 1.3.1 \
+  --frontend-version 1.2.1 \
+  --registry YOUR_DOCKERHUB_USERNAME
+
+# 2. Use registry images (automatic platform detection)
+docker-compose -f docker-compose-multiarch.yaml up
+
+# 3. Images automatically work on:
+#    • Mac M1/M2 (ARM64)  
+#    • Windows (AMD64)
+#    • Linux (AMD64)
 ```
 
 #### Development: Local Services
@@ -85,27 +108,53 @@ npm start
 # Access at http://localhost:3000 (if configured)
 ```
 
-#### Kubernetes Deployment
-For production deployment on Kubernetes:
+### Option 3: ☸️ **Kubernetes with Helm** 
+For production deployment with automatic scaling and management:
 
 ```bash
-# 1. Ensure Kubernetes cluster is running
+# 1. Ensure Kubernetes cluster is running (Kind, minikube, or cloud)
 kubectl cluster-info
 
-# 2. Deploy using Helm
+# 2. Deploy using Helm with NodePort access
 cd monthly-expense-app
 helm dependency update
-helm install monthly-expense .
+helm install monthly-expense . --namespace monthly-expense --create-namespace
 
 # 3. Check deployment status
-kubectl get pods,svc,ingress
+kubectl get pods,svc -n monthly-expense
 
-# 4. Access via port-forward (for testing)
-kubectl port-forward service/frontend-service 8080:80
+# 4. Access application (NodePort - works with Kind)
+# Frontend: http://localhost:30080
+# Backend API: http://localhost:30081/api/transactions
+
+# Alternative: Port-forward access
+kubectl port-forward -n monthly-expense svc/frontend-service 8080:80 &
+kubectl port-forward -n monthly-expense svc/backend-service 8081:8081 &
 # Frontend: http://localhost:8080
-
-kubectl port-forward service/backend-service 8081:8081  
 # Backend API: http://localhost:8081
+```
+
+## 🛠️ Build Scripts Reference
+
+The project includes organized build scripts for different scenarios:
+
+```
+docker-image-scripts/
+├── local/build-local.sh           # Fast local development builds
+├── production/push-multiarch-release.sh  # Multi-arch registry builds  
+└── utilities/                     # Troubleshooting tools
+    ├── build-multiarch.sh         # Alternative multi-arch build
+    └── verify-build.sh            # Image verification
+```
+
+### Quick Commands
+
+```bash
+# Daily development
+./build.sh && docker-compose up
+
+# Release to team  
+./release.sh --backend-version 1.3.1 --frontend-version 1.2.1 --registry YOUR_USERNAME
 ```
 
 ## CSV File Format
@@ -174,30 +223,46 @@ For local development, H2 database is used:
 
 ## Version History
 
-### v1.2.0 (Latest) - November 2025
-**New Features:**
-- 🆕 **Month Filtering for Category Totals**: Users can now filter category spending analysis by specific month/year
-- 🆕 **MonthYearSelector Component**: Interactive frontend component for easy date range selection
-- 🆕 **Enhanced API**: Category totals endpoint now supports optional month/year parameters
+### v1.3.1 / v1.2.1 (Latest) - January 2026
+**🚀 Multi-Architecture Docker Revolution:**
+- **✅ Multi-Platform Support**: Images now work seamlessly on Mac M1/M2 (ARM64), Windows/Linux (AMD64)
+- **✅ Automatic Architecture Detection**: Docker automatically pulls the correct image for your platform
+- **✅ Registry-Based Deployment**: Push once to Docker Hub, run anywhere with automatic platform selection
+- **✅ Streamlined Build Scripts**: Organized `docker-image-scripts/` with local and production workflows
 
-**Infrastructure Improvements:**
-- ✅ Updated Docker base image to Amazon Corretto for better compatibility
-- ✅ Enhanced Helm charts with version 0.2.0
-- ✅ Kubernetes deployment fully tested and documented
-- ✅ Comprehensive Docker workflow documentation in CLAUDE.md
-- ✅ DNS-ready ingress configuration
+**🛠️ Enhanced Docker Infrastructure:**
+- **Security Hardening**: All containers run as non-root users (uid 1001)
+- **Health Checks**: Integrated Spring Boot Actuator for container health monitoring
+- **PostgreSQL Verification**: Automatic verification prevents H2 fallback issues
+- **Chrome Crash Prevention**: Frontend build verification ensures single main.js file
+- **Optimized Images**: Multi-stage builds with minimal attack surface
 
-**Backend Changes (v1.2.0):**
-- Enhanced TransactionController with month/year parameter support
-- Improved TransactionService with conditional filtering logic
-- Maintained full backward compatibility for existing API consumers
+**☸️ Kubernetes Production Readiness:**
+- **NodePort Access**: Direct browser access via localhost:30080/30081
+- **Helm Chart Updates**: Enhanced with multi-architecture registry images
+- **Kind Cluster Support**: Complete development and testing workflow
+- **Documentation**: Comprehensive deployment guide in KIND-DEPLOYMENT.md
 
-**Frontend Changes (v1.1.0):**
-- New MonthYearSelector component with intuitive month/year dropdowns
-- Updated state management for filter persistence
-- Enhanced user experience with "All Months" option for comprehensive view
+**🔧 Developer Experience:**
+- **Simplified Commands**: `./build.sh` for local, `./release.sh` for production
+- **Automatic Rebuilds**: Fresh JAR builds prevent Docker cache issues  
+- **Cross-Platform Testing**: Same images work on any developer machine
+- **Team Collaboration**: Share exact same images across all platforms
+
+**Backend Changes (v1.3.1):**
+- Enhanced Dockerfiles with security best practices
+- PostgreSQL driver verification during build
+- Health check endpoints for Kubernetes readiness probes
+- Non-root user execution for security compliance
+
+**Frontend Changes (v1.2.1):**
+- Multi-stage Docker build optimization
+- Chrome crash prevention through build verification
+- nginx security headers and performance tuning
+- Automatic React Router integration
 
 ### Previous Versions
+- **v1.2.0**: Month filtering for category totals, MonthYearSelector component  
 - **v1.1.1**: Chrome crash prevention and build stability improvements
 - **v1.0.0**: Initial release with core expense tracking functionality
 

@@ -3,10 +3,11 @@ replicaCount: 1
 image:
   # Replace with your Docker Hub username and image name
   repository: sandeepkamathkr/monthly-expense-backend
-  tag: 1.3.0
+  tag: 1.3.1
   pullPolicy: Always
 
 service:
-  type: ClusterIP
+  type: NodePort
   port: 8081
+  nodePort: 30081  # Backend API accessible on port 30081
 
