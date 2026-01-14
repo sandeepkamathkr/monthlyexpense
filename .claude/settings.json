@@ -1,0 +1,27 @@
+{
+  "projectContext": "Monthly Expense Tracker - Spring Boot REST API with PostgreSQL backend, multi-architecture Docker support (AMD64/ARM64), Kubernetes deployment with NGINX ingress, React frontend.",
+  "permissions": {
+    "allowedTools": [
+      "Read",
+      "Write(src/**)",
+      "Write(*.md)",
+      "Write(Dockerfile*)",
+      "Write(docker-compose.yml)", 
+      "Write(k8s/**)",
+      "Write(pom.xml)",
+      "Bash(mvn :*)",
+      "Bash(./mvnw :*)",
+      "Bash(docker :*)",
+      "Bash(kubectl :*)",
+      "Bash(git :*)",
+      "Bash(npm :*)"
+    ],
+    "deny": [
+      "Write(.env*)",
+      "Write(application-prod.yml)",
+      "Bash(rm -rf :*)",
+      "Bash(sudo :*)",
+      "Write(target/**)"
+    ]
+  }
+}
