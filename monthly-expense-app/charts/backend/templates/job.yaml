@@ -1,26 +1,23 @@
-apiVersion: apps/v1
-kind: Deployment
+{{- if .Values.reprocessJob.enabled }}
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: backend
+  name: csv-reprocess-job
+  labels:
+    app: csv-reprocess-job
 spec:
-  replicas: {{ .Values.replicaCount }}
-  selector:
-    matchLabels:
-      app: backend
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 1
   template:
-    metadata:
-      labels:
-        app: backend
     spec:
+      restartPolicy: Never
       containers:
-        - name: backend
+        - name: reprocess
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          ports:
-            - name: http
-              containerPort: {{ .Values.service.port }}
-              protocol: TCP
           env:
+            - name: REPROCESS_ONLY
+              value: "true"
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://{{ .Release.Name }}-postgresql:5432/{{ .Values.global.postgresql.auth.database }}"
             - name: SPRING_DATASOURCE_USERNAME
@@ -32,40 +29,13 @@ spec:
                   key: postgres-password
             - name: SPRING_PROFILES_ACTIVE
               value: "docker"
-            - name: CSV_SCHEDULER_ENABLED
-              value: "{{ .Values.csvScheduler.enabled }}"
             - name: CSV_INPUT_FOLDER
               value: "{{ .Values.csvScheduler.inputFolder }}"
             - name: CSV_DEFAULT_CURRENCY
               value: "{{ .Values.csvScheduler.defaultCurrency }}"
-            - name: CSV_SCHEDULER_INTERVAL_MS
-              value: "{{ .Values.csvScheduler.intervalMs }}"
-          livenessProbe:
-            httpGet:
-              path: /actuator/health/liveness
-              port: http
-            initialDelaySeconds: 90
-            periodSeconds: 20
-            timeoutSeconds: 10
-            failureThreshold: 5
-          readinessProbe:
-            httpGet:
-              path: /actuator/health/readiness
-              port: http
-            initialDelaySeconds: 60
-            periodSeconds: 15
-            timeoutSeconds: 10
-            failureThreshold: 5
           volumeMounts:
             - name: csv-input
               mountPath: /app/csv-input
-          resources:
-            requests:
-              cpu: 200m
-              memory: 512Mi
-            limits:
-              cpu: 500m
-              memory: 1Gi
       volumes:
         - name: csv-input
           {{- if .Values.csvInputVolume.persistentVolumeClaim.enabled }}
@@ -74,3 +44,4 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+{{- end }}

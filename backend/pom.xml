@@ -12,7 +12,7 @@
 
     <groupId>com.expense</groupId>
     <artifactId>monthly</artifactId>
-    <version>1.2.0</version>
+    <version>1.3.4</version>
     <name>Monthly Expense Tracker</name>
     <description>Application to track and analyze monthly expenses</description>
 
@@ -130,6 +130,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- ShedLock: ensures only one replica runs the scheduler at a time -->
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-spring</artifactId>
+            <version>4.44.0</version>
+        </dependency>
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-provider-jdbc-template</artifactId>
+            <version>4.44.0</version>
         </dependency>
     </dependencies>
 

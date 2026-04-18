@@ -1,13 +1,27 @@
 replicaCount: 1
 
 image:
-  # Replace with your Docker Hub username and image name
   repository: sandeepkamathkr/monthly-expense-backend
-  tag: 1.3.1
+  tag: 1.3.4
   pullPolicy: Always
 
 service:
   type: NodePort
   port: 8081
-  nodePort: 30081  # Backend API accessible on port 30081
+  nodePort: 30081
+
+csvScheduler:
+  enabled: true
+  inputFolder: /app/csv-input
+  defaultCurrency: AUD
+  intervalMs: 300000
+
+reprocessJob:
+  enabled: false
+
+csvInputVolume:
+  persistentVolumeClaim:
+    enabled: true
+    size: 5Gi
+    storageClass: ""  # leave empty to use cluster default StorageClass
 

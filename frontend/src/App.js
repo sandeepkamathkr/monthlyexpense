@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import './styles.css';
 
 // API base URL - change this to match your backend URL in production
 const API_BASE_URL = '/api/transactions';
 
-1// Utility function to format currency with proper symbols
+// Utility function to format currency with proper symbols
 const formatCurrency = (amount, currency = 'AUD') => {
     // For Australian users, prioritize symbol display over locale consistency
     const currencyLocaleMap = {
@@ -64,271 +64,6 @@ const formatDate = (dateString) => {
     });
 };
 
-// File Upload Component
-const FileUpload = ({onUploadSuccess}) => {
-    const [selectedFile, setSelectedFile] = useState(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
-    const [showErrorModal, setShowErrorModal] = useState(false);
-    const [modalError, setModalError] = useState(null);
-    const [selectedCurrency, setSelectedCurrency] = useState('USD');
-    const [primaryCurrency, setPrimaryCurrency] = useState(null);
-    const [isLoadingCurrency, setIsLoadingCurrency] = useState(true);
-
-    // Load primary currency when component mounts
-    useEffect(() => {
-        const loadPrimaryCurrency = async () => {
-            try {
-                const response = await axios.get(`${API_BASE_URL}/primary-currency`);
-                const currency = response.data.primaryCurrency;
-                setPrimaryCurrency(currency);
-                if (currency) {
-                    setSelectedCurrency(currency);
-                }
-            } catch (error) {
-                console.error('Error loading primary currency:', error);
-            } finally {
-                setIsLoadingCurrency(false);
-            }
-        };
-        loadPrimaryCurrency();
-    }, []);
-
-    const handleFileChange = (event) => {
-        setSelectedFile(event.target.files[0]);
-        setMessage('');
-        setError('');
-    };
-
-    const handleUpload = async () => {
-        if (!selectedFile) {
-            setError('Please select a file to upload');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-        formData.append('currency', selectedCurrency);
-
-        setIsUploading(true);
-        setMessage('');
-        setError('');
-
-        try {
-            const response = await axios.post(`${API_BASE_URL}/upload`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
-
-            setMessage(`File uploaded successfully. ${response.data.count} transactions processed.`);
-            setSelectedFile(null);
-
-            // Notify parent component about successful upload
-            if (onUploadSuccess) {
-                onUploadSuccess();
-            }
-        } catch (error) {
-            console.error('Error uploading file:', error);
-            
-            // Check if it's a structured error response
-            if (error.response?.data && typeof error.response.data === 'object' && error.response.data.error) {
-                const errorData = error.response.data;
-                
-                if (errorData.error === 'CURRENCY_MISMATCH' || errorData.error === 'MIXED_CURRENCIES_IN_CSV' || errorData.error === 'INVALID_CURRENCY') {
-                    // Show modal for currency-related errors
-                    setModalError({
-                        type: errorData.error,
-                        message: errorData.message
-                    });
-                    setShowErrorModal(true);
-                } else {
-                    // Show regular error for other validation errors
-                    setError(errorData.message || 'Validation error occurred. Please check your file.');
-                }
-            } else {
-                // Handle non-structured error responses
-                const errorMessage = typeof error.response?.data === 'string' 
-                    ? error.response.data 
-                    : 'Error uploading file. Please try again.';
-                setError(errorMessage);
-            }
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    const handleResetFromModal = async () => {
-        if (window.confirm('Are you sure you want to reset all data? This action cannot be undone.')) {
-            try {
-                await axios.delete(`${API_BASE_URL}/reset`);
-                setShowErrorModal(false);
-                setModalError(null);
-                setMessage('Database reset successfully. You can now upload your new CSV file.');
-                
-                // Notify parent to reload data
-                if (onUploadSuccess) {
-                    onUploadSuccess();
-                }
-            } catch (error) {
-                console.error('Error resetting data:', error);
-                setError('Failed to reset database. Please try again.');
-            }
-        }
-    };
-
-    const handleCloseModal = () => {
-        setShowErrorModal(false);
-        setModalError(null);
-    };
-
-    return (
-        <div className="card">
-            <div className="card-header">Upload Transaction CSV</div>
-            <div className="card-body">
-                <div className="form-group mb-3">
-                    <label htmlFor="file" className="form-label">Select CSV File</label>
-                    <input
-                        type="file"
-                        className="form-control"
-                        id="file"
-                        accept=".csv"
-                        onChange={handleFileChange}
-                    />
-                    <small className="form-text text-muted">
-                        CSV should have columns: Date, Description, Amount, Category (no Currency column needed)
-                    </small>
-                </div>
-
-                <div className="form-group mb-3">
-                    <label htmlFor="currency" className="form-label">
-                        Currency {primaryCurrency ? '(Set by existing transactions)' : '(Select for new transactions)'}
-                    </label>
-                    {isLoadingCurrency ? (
-                        <div className="text-muted">Loading currency...</div>
-                    ) : (
-                        <select
-                            id="currency"
-                            className="form-select"
-                            value={selectedCurrency}
-                            onChange={(e) => setSelectedCurrency(e.target.value)}
-                            disabled={!!primaryCurrency}
-                        >
-                            {SUPPORTED_CURRENCIES.map(currency => (
-                                <option key={currency.code} value={currency.code}>
-                                    {currency.code} - {currency.name} ({currency.symbol})
-                                </option>
-                            ))}
-                        </select>
-                    )}
-                    {primaryCurrency && (
-                        <small className="form-text text-muted">
-                            Currency is locked to {primaryCurrency} based on existing transactions. Reset database to change.
-                        </small>
-                    )}
-                    {!primaryCurrency && (
-                        <small className="form-text text-muted">
-                            This will be the primary currency for all future uploads.
-                        </small>
-                    )}
-                </div>
-
-                <button
-                    className="btn btn-primary"
-                    onClick={handleUpload}
-                    disabled={!selectedFile || isUploading || isLoadingCurrency}
-                >
-                    {isUploading ? 'Uploading...' : 'Upload'}
-                </button>
-
-                {message && <div className="alert alert-success mt-3">{message}</div>}
-                {error && <div className="alert alert-danger mt-3">{error}</div>}
-            </div>
-            
-            <ErrorModal 
-                show={showErrorModal}
-                onClose={handleCloseModal}
-                error={modalError}
-                onReset={handleResetFromModal}
-            />
-        </div>
-    );
-};
-
-// Error Modal Component
-const ErrorModal = ({ show, onClose, error, onReset }) => {
-    if (!show) return null;
-
-    const isCurrencyMismatch = error?.type === 'CURRENCY_MISMATCH';
-    const isMixedCurrencies = error?.type === 'MIXED_CURRENCIES_IN_CSV';
-    const isInvalidCurrency = error?.type === 'INVALID_CURRENCY';
-
-    return (
-        <div className="modal" tabIndex="-1" style={{display: 'block', backgroundColor: 'rgba(0,0,0,0.5)'}}>
-            <div className="modal-dialog modal-dialog-centered">
-                <div className="modal-content">
-                    <div className="modal-header bg-danger text-white">
-                        <h5 className="modal-title">
-                            <i className="bi bi-exclamation-triangle me-2"></i>
-                            {isCurrencyMismatch ? 'Currency Mismatch' : 
-                             isMixedCurrencies ? 'Mixed Currencies Detected' : 
-                             isInvalidCurrency ? 'Invalid Currency Code' : 'Upload Error'}
-                        </h5>
-                    </div>
-                    <div className="modal-body">
-                        <div className="text-center mb-3">
-                            <i className="bi bi-currency-exchange fs-1 text-danger"></i>
-                        </div>
-                        <p className="text-center mb-3">
-                            {error?.message || 'An error occurred during file upload.'}
-                        </p>
-                        
-                        {isCurrencyMismatch && (
-                            <div className="alert alert-warning">
-                                <i className="bi bi-info-circle me-2"></i>
-                                <strong>Solution:</strong> To upload transactions with a different currency, 
-                                you must first reset the database to clear all existing transactions.
-                            </div>
-                        )}
-                        
-                        {isMixedCurrencies && (
-                            <div className="alert alert-info">
-                                <i className="bi bi-info-circle me-2"></i>
-                                <strong>Required:</strong> All transactions in a single CSV file must use 
-                                the same currency. Please ensure your CSV contains only one currency.
-                            </div>
-                        )}
-                        
-                        {isInvalidCurrency && (
-                            <div className="alert alert-info">
-                                <i className="bi bi-info-circle me-2"></i>
-                                <strong>Required:</strong> Please use only valid ISO 4217 currency codes. 
-                                Check your CSV file for any typos in the Currency column.
-                            </div>
-                        )}
-                    </div>
-                    <div className="modal-footer">
-                        {isCurrencyMismatch && (
-                            <button 
-                                type="button" 
-                                className="btn btn-warning me-2" 
-                                onClick={onReset}
-                            >
-                                <i className="bi bi-arrow-counterclockwise me-1"></i>
-                                Reset Database
-                            </button>
-                        )}
-                        <button type="button" className="btn btn-secondary" onClick={onClose}>
-                            <i className="bi bi-x-circle me-1"></i>
-                            Close
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 // Category Transactions Modal Component
 const CategoryTransactionsModal = ({show, onClose, category, transactions}) => {
@@ -542,7 +277,7 @@ const MonthYearSelector = ({ selectedMonth, selectedYear, onMonthYearChange }) =
 };
 
 // Category Totals Table Component
-const CategoryTotalsTable = ({categoryTotals, transactions, selectedMonth, selectedYear, onMonthYearChange}) => {
+const CategoryTotalsTable = ({categoryTotals, transactions, selectedMonth, selectedYear}) => {
     const [showModal, setShowModal] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('');
     const [sortField, setSortField] = useState('amount');
@@ -670,11 +405,6 @@ const CategoryTotalsTable = ({categoryTotals, transactions, selectedMonth, selec
 
     return (
         <div>
-            <MonthYearSelector 
-                selectedMonth={selectedMonth}
-                selectedYear={selectedYear}
-                onMonthYearChange={onMonthYearChange}
-            />
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <div className="info-text">
                     <i className="bi bi-info-circle"></i> Click on any category to view detailed transactions
@@ -953,6 +683,106 @@ const TransactionsTable = ({transactions}) => {
     );
 };
 
+// Hero — YTD total + 12-month SVG sparkline + transaction count
+const Hero = ({ totalAmount, monthlyTotals, primaryCurrency, selectedYear, selectedMonth, transactionCount }) => {
+    const monthsArr = Array.from({length: 12}, (_, i) => monthlyTotals[i + 1] || 0);
+    const max = Math.max(...monthsArr, 1);
+    const now = new Date();
+    const curMonth = (selectedYear === now.getFullYear()) ? now.getMonth() : 11;
+    const activeIdx = selectedMonth ? selectedMonth - 1 : curMonth;
+    const thisMonth = monthsArr[activeIdx] || 0;
+    const prevMonth = activeIdx > 0 ? (monthsArr[activeIdx - 1] || 0) : 0;
+    const delta = prevMonth > 0 ? ((thisMonth - prevMonth) / prevMonth) * 100 : 0;
+    const monthName = new Date(0, activeIdx).toLocaleString('default', {month: 'long'});
+
+    const W = 340, H = 56, gap = 4, bw = (W - gap * 11) / 12;
+
+    return (
+        <div className="hero">
+            <div>
+                <div className="ytd-label">
+                    {selectedMonth ? `${monthName} ${selectedYear}` : `Total spending · ${selectedYear}`}
+                </div>
+                <div className="ytd-value">
+                    {formatCurrency(selectedMonth ? thisMonth : totalAmount, primaryCurrency)}
+                </div>
+                <div className="ytd-sub">
+                    {prevMonth > 0 ? (
+                        <>
+                            <span className={delta >= 0 ? 'delta-up' : 'delta-down'}>
+                                <i className={`bi ${delta >= 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-right'}`}></i>
+                                {' '}{Math.abs(delta).toFixed(1)}%
+                            </span>
+                            {' '}vs previous month
+                        </>
+                    ) : (
+                        <span className="text-muted">No prior month data</span>
+                    )}
+                </div>
+            </div>
+            <div className="spark">
+                <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+                    {monthsArr.map((v, i) => {
+                        const h = v > 0 ? Math.max(2, (v / max) * (H - 8)) : 2;
+                        const x = i * (bw + gap);
+                        const y = H - h;
+                        const isActive = i === activeIdx;
+                        return (
+                            <g key={i}>
+                                <rect x={x} y={y} width={bw} height={h}
+                                      fill={isActive ? 'var(--accent)' : (v > 0 ? '#c7d4e8' : '#eef1f5')}
+                                      rx={2} />
+                                <text x={x + bw / 2} y={H - 0.5} textAnchor="middle"
+                                      fontSize="9" fill={isActive ? 'var(--accent)' : 'var(--muted)'}
+                                      style={{fontWeight: isActive ? 600 : 400}}>
+                                    {new Date(0, i).toLocaleString('default', {month: 'narrow'})}
+                                </text>
+                            </g>
+                        );
+                    })}
+                </svg>
+            </div>
+            <div className="last-month">
+                <div className="last-month-label">Transactions</div>
+                <div className="last-month-value">{transactionCount}</div>
+            </div>
+        </div>
+    );
+};
+
+// FilterStrip — global month/year selector that drives the whole dashboard
+const FilterStrip = ({ selectedMonth, selectedYear, onChange, scope }) => {
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({length: 5}, (_, i) => currentYear - i);
+    return (
+        <div className="filter-strip">
+            <span className="fs-label"><i className="bi bi-funnel me-1"></i>Filter</span>
+            <select
+                value={selectedMonth || ''}
+                onChange={e => onChange(e.target.value === '' ? null : +e.target.value, selectedYear)}
+            >
+                <option value="">All months</option>
+                {Array.from({length: 12}, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                        {new Date(0, i).toLocaleString('default', {month: 'long'})}
+                    </option>
+                ))}
+            </select>
+            <select
+                value={selectedYear}
+                onChange={e => onChange(selectedMonth, +e.target.value)}
+            >
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+            <span className="spacer"></span>
+            <span className="scope-chip">
+                <i className="bi bi-info-circle me-1"></i>
+                Dashboard scoped to {scope}
+            </span>
+        </div>
+    );
+};
+
 // Summary Component
 const Summary = ({totalAmount, monthlyTotals, primaryCurrency = 'AUD'}) => {
     return (
@@ -1162,33 +992,170 @@ const SpendingByCategory = ({categoryTotals, primaryCurrency = 'AUD'}) => {
 };
 
 // Collapsible Card Component
-const CollapsibleCard = ({ title, children, defaultExpanded = true }) => {
+const CollapsibleCard = ({ title, children, defaultExpanded = true, dragHandleProps = null, showHandle = true }) => {
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
-    const toggleExpand = () => {
-        setIsExpanded(!isExpanded);
-    };
-
     return (
-        <div className="card mb-4">
+        <div className="card">
             <div className="card-header d-flex justify-content-between align-items-center">
-                <span>{title}</span>
+                <span className="d-flex align-items-center">
+                    {showHandle && dragHandleProps && (
+                        <span className="drag-handle" title="Drag to reorder" {...dragHandleProps}>
+                            <i className="bi bi-grip-vertical"></i>
+                        </span>
+                    )}
+                    <span>{title}</span>
+                </span>
                 <button
                     className="btn btn-sm btn-link p-0"
-                    onClick={toggleExpand}
+                    onClick={() => setIsExpanded(!isExpanded)}
                     aria-expanded={isExpanded}
-                    aria-controls="collapsible-content"
                 >
                     <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
                 </button>
             </div>
             {isExpanded && (
-                <div className="card-body" id="collapsible-content">
+                <div className="card-body">
                     {children}
                 </div>
             )}
         </div>
     );
+};
+
+// Drag-and-drop zone layout — three zones: left column, right column, full-width bottom
+const DraggableZones = ({ cards, layout, setLayout, showHandles }) => {
+    const [dragId, setDragId] = useState(null);
+    const [overKey, setOverKey] = useState(null);
+
+    const findCard = (id) => {
+        for (const z of Object.keys(layout)) {
+            const i = layout[z].indexOf(id);
+            if (i >= 0) return { zone: z, index: i };
+        }
+        return null;
+    };
+
+    const moveTo = (id, zone, index) => {
+        const next = { left: [...layout.left], right: [...layout.right], bottom: [...layout.bottom] };
+        const src = findCard(id);
+        if (!src) return;
+        next[src.zone].splice(src.index, 1);
+        let ins = index;
+        if (src.zone === zone && src.index < index) ins = index - 1;
+        ins = Math.max(0, Math.min(ins, next[zone].length));
+        next[zone].splice(ins, 0, id);
+        setLayout(next);
+    };
+
+    const onDragStart = (id) => (e) => {
+        setDragId(id);
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', id); } catch {}
+    };
+    const onDragEnd = () => { setDragId(null); setOverKey(null); };
+
+    const onCardDragOver = (zone, idx) => (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const k = `${zone}:${idx}`;
+        if (k !== overKey) setOverKey(k);
+    };
+    const onCardDrop = (zone, idx) => (e) => {
+        e.preventDefault();
+        if (dragId) { moveTo(dragId, zone, idx); }
+        setDragId(null); setOverKey(null);
+    };
+    const onZoneDragOver = (zone) => (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (overKey !== zone) setOverKey(zone);
+    };
+    const onZoneDrop = (zone) => (e) => {
+        e.preventDefault();
+        if (dragId) { moveTo(dragId, zone, layout[zone].length); }
+        setDragId(null); setOverKey(null);
+    };
+
+    const renderCard = (id, zone, idx) => {
+        const card = cards[id];
+        if (!card) return null;
+        const isDragging = dragId === id;
+        const isTarget = overKey === `${zone}:${idx}` && dragId && dragId !== id;
+        return (
+            <div
+                key={id}
+                className={`card-wrap mb-4 ${isDragging ? 'dragging' : ''} ${isTarget ? 'drop-target' : ''}`}
+                onDragOver={onCardDragOver(zone, idx)}
+                onDrop={onCardDrop(zone, idx)}
+            >
+                <CollapsibleCard
+                    title={card.title}
+                    defaultExpanded={card.defaultExpanded}
+                    showHandle={showHandles}
+                    dragHandleProps={{
+                        draggable: true,
+                        onDragStart: onDragStart(id),
+                        onDragEnd: onDragEnd,
+                    }}
+                >
+                    {card.body}
+                </CollapsibleCard>
+            </div>
+        );
+    };
+
+    const zoneClass = (z) =>
+        `drop-zone ${dragId ? 'dz-active' : ''} ${overKey === z ? 'dz-over' : ''}`;
+
+    return (
+        <div>
+            <div className="row">
+                <div className="col-md-6">
+                    <div className={zoneClass('left')} onDragOver={onZoneDragOver('left')} onDrop={onZoneDrop('left')}>
+                        {layout.left.map((id, i) => renderCard(id, 'left', i))}
+                        {layout.left.length === 0 && <div className="drop-hint">Drop here</div>}
+                    </div>
+                </div>
+                <div className="col-md-6">
+                    <div className={zoneClass('right')} onDragOver={onZoneDragOver('right')} onDrop={onZoneDrop('right')}>
+                        {layout.right.map((id, i) => renderCard(id, 'right', i))}
+                        {layout.right.length === 0 && <div className="drop-hint">Drop here</div>}
+                    </div>
+                </div>
+            </div>
+            <div className={zoneClass('bottom')} onDragOver={onZoneDragOver('bottom')} onDrop={onZoneDrop('bottom')}>
+                {layout.bottom.map((id, i) => renderCard(id, 'bottom', i))}
+                {layout.bottom.length === 0 && <div className="drop-hint">Drop here — full-width row</div>}
+            </div>
+        </div>
+    );
+};
+
+// Tweaks panel — fixed position, controlled by postMessage from design tool or direct toggle
+const TweaksPanel = ({ visible, onReset, showHandles, setShowHandles }) => {
+    if (!visible) return null;
+    return (
+        <div className="tweaks-panel">
+            <h4>Tweaks</h4>
+            <div className="tweak-row">
+                <span>Show drag handles</span>
+                <input type="checkbox" checked={showHandles} onChange={e => setShowHandles(e.target.checked)} />
+            </div>
+            <div className="tweak-row">
+                <span>Card order</span>
+                <button onClick={onReset}>Reset</button>
+            </div>
+            <div className="tweak-hint">
+                Grab the <i className="bi bi-grip-vertical"></i> handle on any blue header to reorder the 4 cards.
+            </div>
+        </div>
+    );
+};
+
+const DEFAULT_LAYOUT = {
+    layout: { left: ['chart'], right: ['totals'], bottom: ['transactions'] },
+    showHandles: true,
 };
 
 // Main App Component
@@ -1201,6 +1168,19 @@ const App = () => {
     const [error, setError] = useState('');
     const [selectedMonth, setSelectedMonth] = useState(null);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    const [layout, setLayout] = useState(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem('met_card_layout') || 'null');
+            if (saved && Array.isArray(saved.left) && Array.isArray(saved.right) && Array.isArray(saved.bottom)) {
+                const strip = arr => arr.filter(id => id !== 'upload');
+                return { left: strip(saved.left), right: strip(saved.right), bottom: strip(saved.bottom) };
+            }
+        } catch {}
+        return DEFAULT_LAYOUT.layout;
+    });
+    const [showHandles, setShowHandles] = useState(DEFAULT_LAYOUT.showHandles);
+    const [tweaksVisible, setTweaksVisible] = useState(false);
 
     // Load category totals based on selected month/year
     const loadCategoryTotals = async (month = null, year = null) => {
@@ -1281,12 +1261,40 @@ const App = () => {
         }
     };
 
-    // Handle month/year selection change
+    // Handle month/year selection change (global filter)
     const handleMonthYearChange = async (month, year) => {
         setSelectedMonth(month);
         setSelectedYear(year);
         await loadCategoryTotals(month, year);
     };
+
+    // Client-side monthly breakdown for the sparkline (respects selectedYear)
+    const monthlyTotalsForYear = useMemo(() => {
+        const out = {};
+        transactions.forEach(t => {
+            const d = new Date(t.date);
+            if (d.getFullYear() !== selectedYear) return;
+            const m = d.getMonth() + 1;
+            out[m] = (out[m] || 0) + t.amount;
+        });
+        return out;
+    }, [transactions, selectedYear]);
+
+    // Transactions visible under current global filter (for Hero count + category modal)
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            const d = new Date(t.date);
+            if (d.getFullYear() !== selectedYear) return false;
+            if (selectedMonth && (d.getMonth() + 1) !== selectedMonth) return false;
+            return true;
+        });
+    }, [transactions, selectedMonth, selectedYear]);
+
+    // YTD total for the selected year
+    const yearTotal = useMemo(() =>
+        Object.values(monthlyTotalsForYear).reduce((s, a) => s + a, 0),
+        [monthlyTotalsForYear]
+    );
 
     // Reset all data
     const handleReset = async () => {
@@ -1307,14 +1315,31 @@ const App = () => {
         loadData();
     }, []);
 
+    // Persist layout to localStorage whenever it changes
+    useEffect(() => {
+        try { localStorage.setItem('met_card_layout', JSON.stringify(layout)); } catch {}
+    }, [layout]);
+
+    // Respond to tweaks panel activation from design tool postMessage protocol
+    useEffect(() => {
+        const onMsg = (e) => {
+            const d = e.data || {};
+            if (d.type === '__activate_edit_mode') setTweaksVisible(true);
+            if (d.type === '__deactivate_edit_mode') setTweaksVisible(false);
+        };
+        window.addEventListener('message', onMsg);
+        try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch {}
+        return () => window.removeEventListener('message', onMsg);
+    }, []);
+
     if (loading) {
         return (
             <div className="container mt-5">
-                <div className="text-center">
-                    <div className="spinner-border text-primary" role="status">
+                <div className="text-center" style={{color: 'var(--muted)'}}>
+                    <div className="spinner-border" style={{color: 'var(--accent)'}} role="status">
                         <span className="visually-hidden">Loading...</span>
                     </div>
-                    <p className="mt-2">Loading data...</p>
+                    <p className="mt-2" style={{fontSize: 13}}>Loading data…</p>
                 </div>
             </div>
         );
@@ -1323,73 +1348,88 @@ const App = () => {
     if (error) {
         return (
             <div className="container mt-5">
-                <div className="alert alert-danger" role="alert">
+                <div className="alert" style={{background: '#fff5f5', border: '1px solid #fcd4d1', color: 'var(--danger)'}} role="alert">
                     <i className="bi bi-exclamation-triangle-fill me-2"></i>
                     {error}
-                    <button className="btn btn-outline-danger ms-3" onClick={loadData}>
-                        <i className="bi bi-arrow-clockwise me-1"></i>
-                        Retry
+                    <button className="btn btn-sm ms-3" style={{color: 'var(--accent)', border: '1px solid var(--line)'}} onClick={loadData}>
+                        <i className="bi bi-arrow-clockwise me-1"></i>Retry
                     </button>
                 </div>
             </div>
         );
     }
 
+    const primaryCurrency = getPrimaryCurrency(transactions);
+
+    const cards = {
+        chart: {
+            title: <span className="section-title"><i className="bi bi-bar-chart"></i>Spending by Category</span>,
+            defaultExpanded: true,
+            body: <SpendingByCategory categoryTotals={categoryTotals} primaryCurrency={primaryCurrency} />,
+        },
+        totals: {
+            title: <span className="section-title"><i className="bi bi-pie-chart"></i>Category Totals</span>,
+            defaultExpanded: true,
+            body: (
+                <CategoryTotalsTable
+                    categoryTotals={categoryTotals}
+                    transactions={filteredTransactions}
+                    selectedMonth={selectedMonth}
+                    selectedYear={selectedYear}
+                />
+            ),
+        },
+        transactions: {
+            title: <span className="section-title"><i className="bi bi-list-ul"></i>All Transactions</span>,
+            defaultExpanded: false,
+            body: <TransactionsTable transactions={transactions} />,
+        },
+    };
+
     return (
         <div className="container mt-4">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h1 className="display-4">
-                    <i className="bi bi-receipt me-2"></i>
-                    Monthly Expense Tracker
-                </h1>
-                <div>
-                    <button className="btn btn-outline-primary me-2" onClick={loadData}>
-                        <i className="bi bi-arrow-clockwise me-1"></i>
-                        Refresh
+            <div className="appbar">
+                <h1><i className="bi bi-receipt"></i>Monthly Expense Tracker</h1>
+                <div className="actions">
+                    <button className="btn btn-outline-primary btn-sm me-2" onClick={loadData}>
+                        <i className="bi bi-arrow-clockwise me-1"></i>Refresh
                     </button>
-                    <button className="btn btn-outline-danger" onClick={handleReset}>
-                        <i className="bi bi-trash me-1"></i>
-                        Reset All Data
+                    <button className="btn btn-outline-danger btn-sm" onClick={handleReset}>
+                        <i className="bi bi-trash me-1"></i>Reset
                     </button>
                 </div>
             </div>
 
-            <Summary 
-                totalAmount={totalAmount} 
-                monthlyTotals={monthlyTotals} 
-                primaryCurrency={getPrimaryCurrency(transactions)}
+            <FilterStrip
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+                onChange={handleMonthYearChange}
+                scope={selectedMonth
+                    ? `${new Date(0, selectedMonth - 1).toLocaleString('default', {month: 'long'})} ${selectedYear}`
+                    : selectedYear}
             />
 
-            <div className="row">
-                <div className="col-md-6">
-                    <CollapsibleCard title="📊 Upload Data" defaultExpanded={false}>
-                        <FileUpload onUploadSuccess={loadData} />
-                    </CollapsibleCard>
+            <Hero
+                totalAmount={yearTotal}
+                monthlyTotals={monthlyTotalsForYear}
+                primaryCurrency={primaryCurrency}
+                selectedYear={selectedYear}
+                selectedMonth={selectedMonth}
+                transactionCount={filteredTransactions.length}
+            />
 
-                    <CollapsibleCard title="📈 Spending by Category" defaultExpanded={true}>
-                        <SpendingByCategory 
-                            categoryTotals={categoryTotals} 
-                            primaryCurrency={getPrimaryCurrency(transactions)}
-                        />
-                    </CollapsibleCard>
-                </div>
+            <DraggableZones cards={cards} layout={layout} setLayout={setLayout} showHandles={showHandles} />
 
-                <div className="col-md-6">
-                    <CollapsibleCard title="💰 Category Totals" defaultExpanded={true}>
-                        <CategoryTotalsTable 
-                            categoryTotals={categoryTotals} 
-                            transactions={transactions} 
-                            selectedMonth={selectedMonth}
-                            selectedYear={selectedYear}
-                            onMonthYearChange={handleMonthYearChange}
-                        />
-                    </CollapsibleCard>
-                </div>
+            <div className="text-center text-muted small py-3">
+                Grab the <i className="bi bi-grip-vertical"></i> handle on any blue header · drag between left / right columns or the full-width bottom · saved to localStorage
             </div>
 
-            <CollapsibleCard title="📋 All Transactions" defaultExpanded={false}>
-                <TransactionsTable transactions={transactions} />
-            </CollapsibleCard>
+            <TweaksPanel
+                visible={tweaksVisible}
+                onReset={() => setLayout(DEFAULT_LAYOUT.layout)}
+                showHandles={showHandles}
+                setShowHandles={setShowHandles}
+            />
         </div>
     );
 };

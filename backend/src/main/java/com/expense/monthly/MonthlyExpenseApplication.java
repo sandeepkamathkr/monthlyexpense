@@ -2,12 +2,14 @@ package com.expense.monthly;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Main application class for the Monthly Expense Tracker.
  * This Spring Boot application provides REST APIs for managing expense transactions.
  */
 @SpringBootApplication
+@EnableScheduling
 public class MonthlyExpenseApplication {
 
     /**

@@ -11,9 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -31,69 +28,6 @@ import java.util.stream.Collectors;
 public class TransactionController {
 
     private final TransactionService transactionService;
-
-    /**
-     * Upload a CSV file with transactions.
-     *
-     * @param file CSV file
-     * @return List of processed transactions
-     */
-    @PostMapping("/upload")
-    public ResponseEntity<?> uploadCSVFile(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("currency") String currency) {
-        log.info("Received file upload request: {} with currency: {}", file.getOriginalFilename(), currency);
-
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("Please select a CSV file to upload.");
-        }
-
-        try {
-            List<Transaction> savedTransactions = transactionService.processCSVFile(file, currency);
-            List<TransactionDTO> dtos = savedTransactions.stream()
-                    .map(TransactionDTO::fromEntity)
-                    .collect(Collectors.toList());
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("message", "File processed successfully");
-            response.put("transactions", dtos);
-            response.put("count", dtos.size());
-
-            return ResponseEntity.ok(response);
-        } catch (IOException e) {
-            log.error("Failed to process CSV file", e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "UPLOAD_FAILED");
-            errorResponse.put("message", "Failed to process CSV file: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        } catch (IllegalArgumentException e) {
-            log.error("Validation error processing file", e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            
-            String errorMessage = e.getMessage();
-            if (errorMessage.startsWith("MIXED_CURRENCIES_IN_CSV:")) {
-                errorResponse.put("error", "MIXED_CURRENCIES_IN_CSV");
-                errorResponse.put("message", errorMessage.substring("MIXED_CURRENCIES_IN_CSV:".length()).trim());
-            } else if (errorMessage.startsWith("CURRENCY_MISMATCH:")) {
-                errorResponse.put("error", "CURRENCY_MISMATCH");
-                errorResponse.put("message", errorMessage.substring("CURRENCY_MISMATCH:".length()).trim());
-            } else if (errorMessage.startsWith("INVALID_CURRENCY:")) {
-                errorResponse.put("error", "INVALID_CURRENCY");
-                errorResponse.put("message", errorMessage.substring("INVALID_CURRENCY:".length()).trim());
-            } else {
-                errorResponse.put("error", "VALIDATION_ERROR");
-                errorResponse.put("message", errorMessage);
-            }
-            
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-        } catch (Exception e) {
-            log.error("Error processing file", e);
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "INTERNAL_ERROR");
-            errorResponse.put("message", "Error processing file: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
-    }
 
     /**
      * Get all transactions, optionally filtered by category and/or description.

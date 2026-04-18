@@ -11,9 +11,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -62,28 +63,26 @@ public class TransactionServiceImpl implements TransactionService {
      */
     @Override
     @Transactional
-    public List<Transaction> processCSVFile(MultipartFile file, String currency) throws IOException {
-        log.info("Processing CSV file: {} with currency: {}", file.getOriginalFilename(), currency);
-        
-        // Validate the provided currency
+    public List<Transaction> processCSVFile(File file, String currency) throws IOException {
+        log.info("Processing CSV file from disk: {} with currency: {}", file.getName(), currency);
+
         if (!CurrencyUtil.isValidCurrency(currency)) {
-            throw new IllegalArgumentException("INVALID_CURRENCY: Invalid currency code: " + currency + 
+            throw new IllegalArgumentException("INVALID_CURRENCY: Invalid currency code: " + currency +
                 ". Supported currencies are: " + String.join(", ", CurrencyUtil.SUPPORTED_CURRENCIES));
         }
-        
-        try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+
+        try (Reader reader = new BufferedReader(new FileReader(file))) {
             CsvToBean<TransactionDTO> csvToBean = new CsvToBeanBuilder<TransactionDTO>(reader)
                     .withType(TransactionDTO.class)
                     .withIgnoreLeadingWhiteSpace(true)
                     .build();
 
             List<TransactionDTO> transactions = csvToBean.parse();
-            
-            // Apply the provided currency to all transactions (CSV should only have Date, Description, Amount, Category)
+
             for (TransactionDTO dto : transactions) {
                 dto.setCurrency(currency.toUpperCase().trim());
             }
-            
+
             log.info("Parsed {} transactions from CSV and applied currency: {}", transactions.size(), currency);
             return saveTransactions(transactions);
         }
