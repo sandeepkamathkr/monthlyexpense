@@ -1,0 +1,15 @@
+{{- if .Values.csvInputVolume.persistentVolumeClaim.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: csv-input-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.csvInputVolume.persistentVolumeClaim.size }}
+  {{- if .Values.csvInputVolume.persistentVolumeClaim.storageClass }}
+  storageClassName: {{ .Values.csvInputVolume.persistentVolumeClaim.storageClass }}
+  {{- end }}
+{{- end }}

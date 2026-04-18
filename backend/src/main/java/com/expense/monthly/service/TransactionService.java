@@ -2,8 +2,7 @@ package com.expense.monthly.service;
 
 import com.expense.monthly.dto.TransactionDTO;
 import com.expense.monthly.model.Transaction;
-import org.springframework.web.multipart.MultipartFile;
-
+import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
@@ -32,15 +31,15 @@ public interface TransactionService {
     List<Transaction> saveTransactions(List<TransactionDTO> transactions);
 
     /**
-     * Process and save transactions from a CSV file.
+     * Process and save transactions from a CSV file on disk (used by scheduler).
      *
-     * @param file CSV file
+     * @param file CSV file on the local filesystem
      * @param currency Currency to apply to all transactions
      * @return List of saved transactions
      * @throws IOException If file processing fails
      */
-    List<Transaction> processCSVFile(MultipartFile file, String currency) throws IOException;
-    
+    List<Transaction> processCSVFile(File file, String currency) throws IOException;
+
     /**
      * Get the primary currency from existing transactions.
      *

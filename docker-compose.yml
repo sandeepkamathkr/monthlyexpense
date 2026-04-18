@@ -28,6 +28,12 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-password}
       SPRING_PROFILES_ACTIVE: docker  # Activate a specific profile if needed
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:80,http://localhost}
+      CSV_INPUT_FOLDER: /app/csv-input
+      CSV_DEFAULT_CURRENCY: ${CSV_DEFAULT_CURRENCY:-AUD}
+      CSV_SCHEDULER_ENABLED: ${CSV_SCHEDULER_ENABLED:-true}
+      CSV_SCHEDULER_INTERVAL_MS: ${CSV_SCHEDULER_INTERVAL_MS:-300000}
+    volumes:
+      - ${CSV_HOST_PATH:-./csv-input}:/app/csv-input
 
   db:
     image: postgres:17  # Use a specific version for consistency

@@ -4,7 +4,7 @@ A full-stack web application for tracking and analyzing monthly expenses. This a
 
 ## Features
 
-- **CSV Upload**: Upload transaction data from CSV files
+- **Automated CSV Import**: Scheduler auto-imports CSV files from a year/month folder structure every 5 minutes
 - **Transaction Management**: View and manage transaction records
 - **Expense Analysis**: Visualize spending patterns with charts and summaries
 - **Monthly Summaries**: View spending totals by month
@@ -16,15 +16,16 @@ A full-stack web application for tracking and analyzing monthly expenses. This a
 
 ## Technology Stack
 
-### Backend (v1.3.1)
+### Backend (v1.3.4)
 - Java 11
 - Spring Boot 2.7.14
 - Spring Data JPA
 - PostgreSQL (production) / H2 Database (development)
 - OpenCSV for CSV processing
+- ShedLock for distributed scheduler locking
 - Lombok
 
-### Frontend (v1.2.1)
+### Frontend (v1.2.3)
 - React 18 with modern build system
 - Bootstrap 5
 - Chart.js for data visualization
@@ -177,7 +178,6 @@ Date,Description,Amount,Category
 
 The application provides the following REST API endpoints:
 
-- `POST /api/transactions/upload`: Upload a CSV file with transactions
 - `GET /api/transactions`: Get all transactions
 - `GET /api/transactions/month?month={month}&year={year}`: Get transactions for a specific month and year
 - `GET /api/transactions/category/{category}`: Get transactions by category
@@ -223,7 +223,49 @@ For local development, H2 database is used:
 
 ## Version History
 
-### v1.3.1 / v1.2.1 (Latest) - January 2026
+### v1.3.4 / v1.2.3 (Latest) - April 2026
+
+**🔒 ShedLock — Distributed Scheduler Locking:**
+- Added ShedLock to ensure only one replica runs the CSV scheduler at a time
+- Eliminates duplicate transaction imports when running multiple backend replicas
+- Lock state stored in PostgreSQL `shedlock` table (auto-created on startup)
+- Backend safely scales to 2+ replicas
+
+**♻️ Kubernetes Job for Reprocess:**
+- Replaced per-pod `REPROCESS_ALL` flag with a dedicated `batch/v1` Kubernetes Job
+- Trigger via `helm upgrade --set backend.reprocessJob.enabled=true`; disable with `=false`
+- Job clears all transactions, resets `.csv.done` → `.csv`, then exits cleanly
+- Eliminates race condition where multiple pods could simultaneously reimport all files
+
+**🗑️ Upload endpoint removed:**
+- Removed `POST /api/transactions/upload` REST endpoint and `FileUpload` UI card
+- CSV imports are handled exclusively by the scheduler
+
+---
+
+### v1.3.2 / v1.2.2 - April 2026
+
+**🤖 CSV Auto-Upload Scheduler:**
+- **Automated CSV import**: Scheduler scans a year/month folder structure every 5 minutes (e.g. `2025/Jan/bank.csv`, `2026/Feb/bank.csv`)
+- **Valid month folders**: `Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec`
+- **Reprocess-all flag**: Set `CSV_REPROCESS_ALL=true` to clear the database and reimport all CSV files on startup
+- **File lifecycle**: Processed files renamed to `.csv.done`; failed files copied to `unprocessed/` folder for retry
+- **Volume mount**: Local CSV folder mounted into Docker and Kubernetes deployments via `hostPath`
+- **Configurable interval**: Control scan frequency via `CSV_SCHEDULER_INTERVAL_MS` (default: 300000ms)
+
+**🎨 UI v2 Design:**
+- Flat cards with hero sparkline visualization
+- Global filter strip for quick data filtering
+- Drag-and-drop card layout
+
+**☸️ Helm Chart Updates:**
+- CSV scheduler env vars (`CSV_SCHEDULER_ENABLED`, `CSV_INPUT_FOLDER`, `CSV_REPROCESS_ALL`, etc.)
+- `hostPath` volume mount for local CSV folder in Kubernetes
+- Frontend: NodePort `30080`, Backend: NodePort `30081`
+
+---
+
+### v1.3.1 / v1.2.1 - January 2026
 **🚀 Multi-Architecture Docker Revolution:**
 - **✅ Multi-Platform Support**: Images now work seamlessly on Mac M1/M2 (ARM64), Windows/Linux (AMD64)
 - **✅ Automatic Architecture Detection**: Docker automatically pulls the correct image for your platform
