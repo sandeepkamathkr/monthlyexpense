@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import './styles.css';
 
@@ -1162,33 +1162,170 @@ const SpendingByCategory = ({categoryTotals, primaryCurrency = 'AUD'}) => {
 };
 
 // Collapsible Card Component
-const CollapsibleCard = ({ title, children, defaultExpanded = true }) => {
+const CollapsibleCard = ({ title, children, defaultExpanded = true, dragHandleProps = null, showHandle = true }) => {
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
-    const toggleExpand = () => {
-        setIsExpanded(!isExpanded);
-    };
-
     return (
-        <div className="card mb-4">
+        <div className="card">
             <div className="card-header d-flex justify-content-between align-items-center">
-                <span>{title}</span>
+                <span className="d-flex align-items-center">
+                    {showHandle && dragHandleProps && (
+                        <span className="drag-handle" title="Drag to reorder" {...dragHandleProps}>
+                            <i className="bi bi-grip-vertical" style={{color: 'white', fontSize: '1.05rem'}}></i>
+                        </span>
+                    )}
+                    <span>{title}</span>
+                </span>
                 <button
                     className="btn btn-sm btn-link p-0"
-                    onClick={toggleExpand}
+                    onClick={() => setIsExpanded(!isExpanded)}
                     aria-expanded={isExpanded}
-                    aria-controls="collapsible-content"
                 >
-                    <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                    <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'}`} style={{color: 'white'}}></i>
                 </button>
             </div>
             {isExpanded && (
-                <div className="card-body" id="collapsible-content">
+                <div className="card-body">
                     {children}
                 </div>
             )}
         </div>
     );
+};
+
+// Drag-and-drop zone layout — three zones: left column, right column, full-width bottom
+const DraggableZones = ({ cards, layout, setLayout, showHandles }) => {
+    const [dragId, setDragId] = useState(null);
+    const [overKey, setOverKey] = useState(null);
+
+    const findCard = (id) => {
+        for (const z of Object.keys(layout)) {
+            const i = layout[z].indexOf(id);
+            if (i >= 0) return { zone: z, index: i };
+        }
+        return null;
+    };
+
+    const moveTo = (id, zone, index) => {
+        const next = { left: [...layout.left], right: [...layout.right], bottom: [...layout.bottom] };
+        const src = findCard(id);
+        if (!src) return;
+        next[src.zone].splice(src.index, 1);
+        let ins = index;
+        if (src.zone === zone && src.index < index) ins = index - 1;
+        ins = Math.max(0, Math.min(ins, next[zone].length));
+        next[zone].splice(ins, 0, id);
+        setLayout(next);
+    };
+
+    const onDragStart = (id) => (e) => {
+        setDragId(id);
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', id); } catch {}
+    };
+    const onDragEnd = () => { setDragId(null); setOverKey(null); };
+
+    const onCardDragOver = (zone, idx) => (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const k = `${zone}:${idx}`;
+        if (k !== overKey) setOverKey(k);
+    };
+    const onCardDrop = (zone, idx) => (e) => {
+        e.preventDefault();
+        if (dragId) { moveTo(dragId, zone, idx); }
+        setDragId(null); setOverKey(null);
+    };
+    const onZoneDragOver = (zone) => (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (overKey !== zone) setOverKey(zone);
+    };
+    const onZoneDrop = (zone) => (e) => {
+        e.preventDefault();
+        if (dragId) { moveTo(dragId, zone, layout[zone].length); }
+        setDragId(null); setOverKey(null);
+    };
+
+    const renderCard = (id, zone, idx) => {
+        const card = cards[id];
+        if (!card) return null;
+        const isDragging = dragId === id;
+        const isTarget = overKey === `${zone}:${idx}` && dragId && dragId !== id;
+        return (
+            <div
+                key={id}
+                className={`card-wrap mb-4 ${isDragging ? 'dragging' : ''} ${isTarget ? 'drop-target' : ''}`}
+                onDragOver={onCardDragOver(zone, idx)}
+                onDrop={onCardDrop(zone, idx)}
+            >
+                <CollapsibleCard
+                    title={card.title}
+                    defaultExpanded={card.defaultExpanded}
+                    showHandle={showHandles}
+                    dragHandleProps={{
+                        draggable: true,
+                        onDragStart: onDragStart(id),
+                        onDragEnd: onDragEnd,
+                    }}
+                >
+                    {card.body}
+                </CollapsibleCard>
+            </div>
+        );
+    };
+
+    const zoneClass = (z) =>
+        `drop-zone ${dragId ? 'dz-active' : ''} ${overKey === z ? 'dz-over' : ''}`;
+
+    return (
+        <div>
+            <div className="row">
+                <div className="col-md-6">
+                    <div className={zoneClass('left')} onDragOver={onZoneDragOver('left')} onDrop={onZoneDrop('left')}>
+                        {layout.left.map((id, i) => renderCard(id, 'left', i))}
+                        {layout.left.length === 0 && <div className="drop-hint">Drop here</div>}
+                    </div>
+                </div>
+                <div className="col-md-6">
+                    <div className={zoneClass('right')} onDragOver={onZoneDragOver('right')} onDrop={onZoneDrop('right')}>
+                        {layout.right.map((id, i) => renderCard(id, 'right', i))}
+                        {layout.right.length === 0 && <div className="drop-hint">Drop here</div>}
+                    </div>
+                </div>
+            </div>
+            <div className={zoneClass('bottom')} onDragOver={onZoneDragOver('bottom')} onDrop={onZoneDrop('bottom')}>
+                {layout.bottom.map((id, i) => renderCard(id, 'bottom', i))}
+                {layout.bottom.length === 0 && <div className="drop-hint">Drop here — full-width row</div>}
+            </div>
+        </div>
+    );
+};
+
+// Tweaks panel — fixed position, controlled by postMessage from design tool or direct toggle
+const TweaksPanel = ({ visible, onReset, showHandles, setShowHandles }) => {
+    if (!visible) return null;
+    return (
+        <div className="tweaks-panel">
+            <h4>Tweaks</h4>
+            <div className="tweak-row">
+                <span>Show drag handles</span>
+                <input type="checkbox" checked={showHandles} onChange={e => setShowHandles(e.target.checked)} />
+            </div>
+            <div className="tweak-row">
+                <span>Card order</span>
+                <button onClick={onReset}>Reset</button>
+            </div>
+            <div className="tweak-hint">
+                Grab the <i className="bi bi-grip-vertical"></i> handle on any blue header to reorder the 4 cards.
+            </div>
+        </div>
+    );
+};
+
+const DEFAULT_LAYOUT = {
+    layout: { left: ['chart', 'upload'], right: ['totals'], bottom: ['transactions'] },
+    showHandles: true,
 };
 
 // Main App Component
@@ -1201,6 +1338,16 @@ const App = () => {
     const [error, setError] = useState('');
     const [selectedMonth, setSelectedMonth] = useState(null);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    const [layout, setLayout] = useState(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem('met_card_layout') || 'null');
+            if (saved && Array.isArray(saved.left) && Array.isArray(saved.right) && Array.isArray(saved.bottom)) return saved;
+        } catch {}
+        return DEFAULT_LAYOUT.layout;
+    });
+    const [showHandles, setShowHandles] = useState(DEFAULT_LAYOUT.showHandles);
+    const [tweaksVisible, setTweaksVisible] = useState(false);
 
     // Load category totals based on selected month/year
     const loadCategoryTotals = async (month = null, year = null) => {
@@ -1307,6 +1454,23 @@ const App = () => {
         loadData();
     }, []);
 
+    // Persist layout to localStorage whenever it changes
+    useEffect(() => {
+        try { localStorage.setItem('met_card_layout', JSON.stringify(layout)); } catch {}
+    }, [layout]);
+
+    // Respond to tweaks panel activation from design tool postMessage protocol
+    useEffect(() => {
+        const onMsg = (e) => {
+            const d = e.data || {};
+            if (d.type === '__activate_edit_mode') setTweaksVisible(true);
+            if (d.type === '__deactivate_edit_mode') setTweaksVisible(false);
+        };
+        window.addEventListener('message', onMsg);
+        try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch {}
+        return () => window.removeEventListener('message', onMsg);
+    }, []);
+
     if (loading) {
         return (
             <div className="container mt-5">
@@ -1335,6 +1499,39 @@ const App = () => {
         );
     }
 
+    const primaryCurrency = getPrimaryCurrency(transactions);
+
+    const cards = {
+        upload: {
+            title: '📊 Upload Data',
+            defaultExpanded: false,
+            body: <FileUpload onUploadSuccess={loadData} />,
+        },
+        chart: {
+            title: '📈 Spending by Category',
+            defaultExpanded: true,
+            body: <SpendingByCategory categoryTotals={categoryTotals} primaryCurrency={primaryCurrency} />,
+        },
+        totals: {
+            title: '💰 Category Totals',
+            defaultExpanded: true,
+            body: (
+                <CategoryTotalsTable
+                    categoryTotals={categoryTotals}
+                    transactions={transactions}
+                    selectedMonth={selectedMonth}
+                    selectedYear={selectedYear}
+                    onMonthYearChange={handleMonthYearChange}
+                />
+            ),
+        },
+        transactions: {
+            title: '📋 All Transactions',
+            defaultExpanded: false,
+            body: <TransactionsTable transactions={transactions} />,
+        },
+    };
+
     return (
         <div className="container mt-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -1354,42 +1551,24 @@ const App = () => {
                 </div>
             </div>
 
-            <Summary 
-                totalAmount={totalAmount} 
-                monthlyTotals={monthlyTotals} 
-                primaryCurrency={getPrimaryCurrency(transactions)}
+            <Summary
+                totalAmount={totalAmount}
+                monthlyTotals={monthlyTotals}
+                primaryCurrency={primaryCurrency}
             />
 
-            <div className="row">
-                <div className="col-md-6">
-                    <CollapsibleCard title="📊 Upload Data" defaultExpanded={false}>
-                        <FileUpload onUploadSuccess={loadData} />
-                    </CollapsibleCard>
+            <DraggableZones cards={cards} layout={layout} setLayout={setLayout} showHandles={showHandles} />
 
-                    <CollapsibleCard title="📈 Spending by Category" defaultExpanded={true}>
-                        <SpendingByCategory 
-                            categoryTotals={categoryTotals} 
-                            primaryCurrency={getPrimaryCurrency(transactions)}
-                        />
-                    </CollapsibleCard>
-                </div>
-
-                <div className="col-md-6">
-                    <CollapsibleCard title="💰 Category Totals" defaultExpanded={true}>
-                        <CategoryTotalsTable 
-                            categoryTotals={categoryTotals} 
-                            transactions={transactions} 
-                            selectedMonth={selectedMonth}
-                            selectedYear={selectedYear}
-                            onMonthYearChange={handleMonthYearChange}
-                        />
-                    </CollapsibleCard>
-                </div>
+            <div className="text-center text-muted small py-3">
+                Grab the <i className="bi bi-grip-vertical"></i> handle on any blue header · drag between left / right columns or the full-width bottom · saved to localStorage
             </div>
 
-            <CollapsibleCard title="📋 All Transactions" defaultExpanded={false}>
-                <TransactionsTable transactions={transactions} />
-            </CollapsibleCard>
+            <TweaksPanel
+                visible={tweaksVisible}
+                onReset={() => setLayout(DEFAULT_LAYOUT.layout)}
+                showHandles={showHandles}
+                setShowHandles={setShowHandles}
+            />
         </div>
     );
 };
