@@ -1,5 +1,43 @@
 # Monthly Expense Tracker - Architecture Diagram
 
+## 0. End-to-End Data Pipeline (CSV Preprocessor → Expense Tracker)
+
+```mermaid
+flowchart LR
+    subgraph Preprocessor["🐍 CSV Preprocessor (External Project)"]
+        direction TB
+        RAW["📁 Raw Bank CSV Files<br/>(TransHist / CommBank format)"]
+        FIND["find_csv_files()<br/>skip *_Processed.csv"]
+        FMT["detect_file_format()<br/>headers / no headers"]
+        OUT["determine_output_format()<br/>TransHist vs CommBank columns"]
+        CLEAN["clean_date()<br/>clean_amount()"]
+        CAT["categorize()<br/>keyword → category"]
+        FILT["Filter<br/>amount ≤ 0, missing fields<br/>is_excluded()"]
+        PROC["📄 {name}_Monthly_Processed.csv"]
+        SUM["Print Summary<br/>rows, total, top categories"]
+
+        RAW --> FIND --> FMT --> OUT --> CLEAN --> CAT --> FILT --> PROC --> SUM
+    end
+
+    subgraph Tracker["💰 Monthly Expense Tracker"]
+        direction TB
+        VOL["📁 /app/csv-input/YYYY/MMM/"]
+        SCHED["CsvSchedulerService<br/>(every 5 min)"]
+        DB["PostgreSQL<br/>transactions table"]
+        API["Spring Boot REST API"]
+        UI["React Dashboard<br/>Charts & Tables"]
+
+        VOL --> SCHED --> DB --> API --> UI
+    end
+
+    PROC -->|"Copy to input folder"| VOL
+
+    style Preprocessor fill:#fff8e1,stroke:#F57F17
+    style Tracker fill:#e8f5e9,stroke:#2E7D32
+```
+
+---
+
 ## 1. Overall System Architecture
 
 ```mermaid
