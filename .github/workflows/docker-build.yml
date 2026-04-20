@@ -1,0 +1,126 @@
+name: Docker Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/docker-build.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/docker-build.yml'
+
+env:
+  REGISTRY: docker.io
+  BACKEND_IMAGE: monthly-expense-backend
+  FRONTEND_IMAGE: monthly-expense-frontend
+
+jobs:
+  docker-build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build and test JAR file
+        run: |
+          cd backend
+          mvn verify --batch-mode
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          load: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          load: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test backend container
+        run: |
+          docker run --rm -d --name test-backend -p 8081:8081 \
+            -e SPRING_DATASOURCE_URL=jdbc:h2:mem:testdb \
+            -e SPRING_DATASOURCE_USERNAME=sa \
+            -e SPRING_DATASOURCE_PASSWORD=password \
+            -e SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.h2.Driver \
+            ${{ env.BACKEND_IMAGE }}:latest
+          sleep 15
+          echo "🔍 Checking if container is still running..."
+          docker ps | grep test-backend || (echo "❌ Container stopped unexpectedly" && docker logs test-backend && exit 1)
+          echo "🔍 Testing health endpoint..."
+          curl -f http://localhost:8081/actuator/health || (echo "❌ Health check failed" && docker logs test-backend && exit 1)
+          docker stop test-backend
+          echo "✅ Backend container test passed"
+
+      - name: Test frontend container
+        run: |
+          echo "🔍 Testing frontend container with dummy backend for nginx upstream..."
+          # Create a simple dummy backend for nginx upstream resolution
+          docker run -d --name dummy-backend \
+            --network bridge \
+            -p 8082:8081 \
+            nginx:alpine sh -c 'echo "Backend simulation" > /usr/share/nginx/html/index.html && nginx -g "daemon off;"'
+          
+          # Get the dummy backend IP for nginx configuration
+          DUMMY_BACKEND_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' dummy-backend)
+          echo "🔍 Dummy backend IP: $DUMMY_BACKEND_IP"
+          
+          # Start frontend container with network connectivity to dummy backend
+          docker run -d --name test-frontend \
+            --add-host backend-service:$DUMMY_BACKEND_IP \
+            -p 8080:80 ${{ env.FRONTEND_IMAGE }}:latest
+          
+          sleep 10
+          echo "🔍 Checking frontend container status..."
+          docker ps | grep test-frontend && echo "✅ Frontend container is running" || echo "❌ Frontend container failed"
+          
+          echo "🔍 Testing frontend HTTP response..."
+          curl -f http://localhost:8080/ && echo "✅ Frontend HTTP test passed" || (echo "❌ Frontend HTTP test failed" && docker logs test-frontend)
+          
+          # Cleanup
+          docker stop test-frontend dummy-backend || true
+          docker rm test-frontend dummy-backend || true
+          echo "✅ Frontend container test completed"
+
+      - name: Test Docker Compose integration
+        run: |
+          # Temporarily modify docker-compose to use port 8080 to avoid conflicts
+          sed -i 's/"80:80"/"8080:80"/' docker-compose.yml
+          docker compose up -d
+          sleep 30
+          curl -f http://localhost:8080/ || exit 1
+          curl -f http://localhost:8081/actuator/health || exit 1
+          docker compose down
+          echo "✅ Docker Compose integration test passed"

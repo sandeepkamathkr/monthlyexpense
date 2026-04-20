@@ -6,7 +6,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Main application class for the Monthly Expense Tracker.
- * This Spring Boot application provides REST APIs for managing expense transactions.
+ * This Spring Boot application provides REST APIs for managing expense transactions,
+ * CSV file processing, and transaction analytics.
  */
 @SpringBootApplication
 @EnableScheduling
