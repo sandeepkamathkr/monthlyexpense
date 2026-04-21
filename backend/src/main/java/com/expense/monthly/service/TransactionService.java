@@ -112,6 +112,15 @@ public interface TransactionService {
     Map<String, BigDecimal> calculateTotalsByCategory(Integer month, Integer year);
 
     /**
+     * Delete all transactions for a specific month and year.
+     * Used by the staging service before writing a re-imported CSV for the same month.
+     *
+     * @param month Month (1-12)
+     * @param year  Year
+     */
+    void deleteTransactionsByMonth(int month, int year);
+
+    /**
      * Delete all transactions.
      */
     void deleteAllTransactions();
@@ -119,7 +128,15 @@ public interface TransactionService {
     /**
      * Executes a script to reset the H2 database (e.g., DROP ALL OBJECTS).
      */
-    void executeH2ResetScript(); // New method
+    void executeH2ResetScript();
 
+    /**
+     * Updates the category of a single transaction and returns the updated entity.
+     *
+     * @param id       transaction id
+     * @param category new category value
+     * @return updated Transaction entity
+     */
+    Transaction updateTransactionCategory(Long id, String category);
 
 }

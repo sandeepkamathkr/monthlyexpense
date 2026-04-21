@@ -3,6 +3,7 @@ package com.expense.monthly.service;
 import com.expense.monthly.dto.TransactionDTO;
 import com.expense.monthly.model.Transaction;
 import com.expense.monthly.repository.TransactionRepository;
+import com.expense.monthly.service.CategoryOverrideService;
 import com.expense.monthly.util.CurrencyUtil;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
@@ -34,6 +35,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final CategoryOverrideService categoryOverrideService;
 
     /**
      * {@inheritDoc}
@@ -79,8 +81,14 @@ public class TransactionServiceImpl implements TransactionService {
 
             List<TransactionDTO> transactions = csvToBean.parse();
 
+            Map<String, String> overrides = categoryOverrideService.getAllOverridesAsMap();
             for (TransactionDTO dto : transactions) {
                 dto.setCurrency(currency.toUpperCase().trim());
+                String key = dto.getDescription().toLowerCase().trim();
+                if (overrides.containsKey(key)) {
+                    dto.setCategory(overrides.get(key));
+                    dto.setHasOverride(Boolean.TRUE);
+                }
             }
 
             log.info("Parsed {} transactions from CSV and applied currency: {}", transactions.size(), currency);
@@ -219,6 +227,16 @@ public class TransactionServiceImpl implements TransactionService {
      */
     @Override
     @Transactional
+    public void deleteTransactionsByMonth(int month, int year) {
+        log.info("Deleting transactions for month={}, year={}", month, year);
+        transactionRepository.deleteByMonthAndYear(month, year);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
     public void deleteAllTransactions() {
         log.info("Deleting all transactions");
         transactionRepository.deleteAll();
@@ -233,6 +251,18 @@ public class TransactionServiceImpl implements TransactionService {
         log.info("Executing H2 specific reset script: DROP ALL OBJECTS");
         jdbcTemplate.execute("DROP ALL OBJECTS");
         log.info("H2 database has been cleared. Schema recreation depends on JPA/Hibernate configuration (e.g., ddl-auto) and Spring Boot's datasource initialization.");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public Transaction updateTransactionCategory(Long id, String category) {
+        Transaction t = transactionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + id));
+        t.setCategory(category);
+        return transactionRepository.save(t);
     }
 
 }

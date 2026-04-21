@@ -33,6 +33,17 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByYear(int year);
 
     /**
+     * Delete all transactions for a specific month and year.
+     * Used during re-import to wipe existing data before writing the new file.
+     *
+     * @param month Month (1-12) — maps to the entity field {@code month} (column: transaction_month)
+     * @param year  Year         — maps to the entity field {@code year}  (column: transaction_year)
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByMonthAndYear(int month, int year);
+
+    /**
      * Find all transactions by category (case insensitive).
      *
      * @param category Category name

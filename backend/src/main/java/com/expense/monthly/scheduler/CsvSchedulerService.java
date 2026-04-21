@@ -1,6 +1,7 @@
 package com.expense.monthly.scheduler;
 
 import com.expense.monthly.model.Transaction;
+import com.expense.monthly.service.ImportFailureService;
 import com.expense.monthly.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,8 +13,6 @@ import org.springframework.stereotype.Service;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.List;
 
 /**
@@ -25,16 +24,17 @@ import java.util.List;
  *
  * Example:
  *   /app/csv-input/2025/Jan/westpac.csv
- *   /app/csv-input/2025/Jan/anz.csv
- *   /app/csv-input/2026/Jan/commbank.csv
+ *   /app/csv-input/2026/May/commbank.csv
  *
  * Valid month folder names (case-sensitive): Jan, Feb, Mar, Apr, May, Jun,
  *                                            Jul, Aug, Sep, Oct, Nov, Dec
  *
  * After processing:
- *   - Success: file is renamed to <bank>.csv.done (kept in place, skipped on next scan)
- *   - Failure: file is copied to <input-folder>/unprocessed/<year>/<month>/<bank>.csv
- *              (original stays in place and will be retried on next scan)
+ *   - Success: file is renamed to <bank>.csv.done (skipped on next scan)
+ *   - Failure: file is renamed to <bank>.csv.failed (skipped on next scan)
+ *              + an ImportFailure DB record is created with an actionable error message
+ *              → visible in the Import page "Failed Imports" panel
+ *              → user can download the .csv.failed file, fix it, and re-upload via Import UI
  */
 @Service
 @ConditionalOnProperty(name = "reprocess.only", havingValue = "false", matchIfMissing = true)
@@ -44,6 +44,7 @@ public class CsvSchedulerService {
 
     private final TransactionService transactionService;
     private final CsvFileManager csvFileManager;
+    private final ImportFailureService importFailureService;
 
     @Value("${csv.scheduler.default-currency:AUD}")
     private String defaultCurrency;
@@ -72,11 +73,11 @@ public class CsvSchedulerService {
         }
 
         for (File yearFolder : yearFolders) {
-            processYearFolder(inputFolder, yearFolder);
+            processYearFolder(yearFolder);
         }
     }
 
-    private void processYearFolder(File inputFolder, File yearFolder) {
+    private void processYearFolder(File yearFolder) {
         File[] monthFolders = yearFolder.listFiles(f -> f.isDirectory() && csvFileManager.isValidMonth(f.getName()));
         if (monthFolders == null || monthFolders.length == 0) {
             log.debug("No valid month folders (e.g. Jan, Feb) found in: {}", yearFolder.getName());
@@ -84,11 +85,11 @@ public class CsvSchedulerService {
         }
 
         for (File monthFolder : monthFolders) {
-            processMonthFolder(inputFolder, yearFolder.getName(), monthFolder);
+            processMonthFolder(yearFolder.getName(), monthFolder);
         }
     }
 
-    private void processMonthFolder(File inputFolder, String year, File monthFolder) {
+    private void processMonthFolder(String year, File monthFolder) {
         File[] csvFiles = monthFolder.listFiles((dir, name) -> name.toLowerCase().endsWith(".csv"));
         if (csvFiles == null || csvFiles.length == 0) {
             log.debug("No CSV files in: {}/{}", year, monthFolder.getName());
@@ -98,47 +99,33 @@ public class CsvSchedulerService {
         log.info("Found {} CSV file(s) in {}/{}", csvFiles.length, year, monthFolder.getName());
 
         for (File csvFile : csvFiles) {
-            processFile(inputFolder, year, monthFolder.getName(), csvFile);
+            processFile(year, monthFolder.getName(), csvFile);
         }
     }
 
-    private void processFile(File inputFolder, String year, String month, File csvFile) {
+    private void processFile(String year, String month, File csvFile) {
         log.info("Processing {}/{}/{}", year, month, csvFile.getName());
 
         try {
             List<Transaction> transactions = transactionService.processCSVFile(csvFile, defaultCurrency);
             log.info("Imported {} transaction(s) from {}/{}/{}", transactions.size(), year, month, csvFile.getName());
+
             File doneFile = new File(csvFile.getParentFile(), csvFile.getName() + ".done");
             if (!csvFile.renameTo(doneFile)) {
                 log.warn("Could not rename processed file to .done: {}/{}/{}", year, month, csvFile.getName());
             }
         } catch (Exception e) {
-            log.error("Failed to process {}/{}/{} — {}", year, month, csvFile.getName(), e.getMessage());
-            copyToUnprocessed(inputFolder, year, month, csvFile);
-        }
-    }
-
-    private void copyToUnprocessed(File inputFolder, String year, String month, File csvFile) {
-        File destination = new File(inputFolder,
-                CsvFileManager.UNPROCESSED_DIR + File.separator + year + File.separator + month);
-        destination.mkdirs();
-
-        File destFile = new File(destination, csvFile.getName());
-
-        if (destFile.exists()) {
-            String baseName = csvFile.getName().replaceAll("\\.csv$", "");
-            int counter = 1;
-            do {
-                destFile = new File(destination, baseName + "_" + counter + ".csv");
-                counter++;
-            } while (destFile.exists());
-        }
-
-        try {
-            Files.copy(csvFile.toPath(), destFile.toPath());
-            log.info("Copied failed file to unprocessed/{}/{}/{}", year, month, destFile.getName());
-        } catch (IOException ex) {
-            log.warn("Could not copy failed file to unprocessed: {}/{}/{}", year, month, csvFile.getName());
+            // Rename to .csv.failed so the scheduler skips it on the next scan
+            File failedFile = new File(csvFile.getParentFile(), csvFile.getName() + ".failed");
+            if (csvFile.renameTo(failedFile)) {
+                String relativePath = year + "/" + month + "/" + failedFile.getName();
+                importFailureService.recordFailure(relativePath, e.getMessage());
+                log.error("Failed to process {}/{}/{} — recorded in Import page. Error: {}",
+                        year, month, csvFile.getName(), e.getMessage());
+            } else {
+                log.error("Failed to process {}/{}/{} AND could not rename to .failed. Error: {}",
+                        year, month, csvFile.getName(), e.getMessage());
+            }
         }
     }
 }

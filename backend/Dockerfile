@@ -16,7 +16,7 @@ FROM --platform=${TARGETPLATFORM} docker.io/library/amazoncorretto:17-alpine
 # Labels help with image management and identification
 LABEL maintainer="Monthly Expense Team"
 LABEL description="Monthly Expense Tracker Backend - Spring Boot Application"
-LABEL version="1.2.0"
+LABEL version="1.3.5"
 LABEL platform="${TARGETPLATFORM}"
 LABEL component="backend"
 LABEL language="java"
@@ -47,7 +47,7 @@ RUN addgroup -g 1001 -S appgroup && \
 
 # Copy the Spring Boot JAR file with proper ownership
 # --chown ensures the file is owned by the application user
-COPY --chown=appuser:appgroup target/monthly-1.2.0.jar app.jar
+COPY --chown=appuser:appgroup target/monthly-1.3.4.jar app.jar
 
 # ==============================================================================
 # BUILD VERIFICATION

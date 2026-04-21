@@ -73,6 +73,13 @@ public class Transaction {
     private int year;
 
     /**
+     * True if the category was overridden by a user-saved rule during import.
+     * Null means no override was applied.
+     */
+    @Column(name = "has_override")
+    private Boolean hasOverride;
+
+    /**
      * Pre-persist hook to set month and year fields based on the date.
      */
     @PrePersist

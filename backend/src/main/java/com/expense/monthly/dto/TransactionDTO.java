@@ -20,6 +20,12 @@ import java.time.LocalDate;
 public class TransactionDTO {
 
     /**
+     * DB id — not part of the CSV format; ignored by OpenCSV.
+     * Exposed in REST responses so the frontend can call PATCH /{id}/category.
+     */
+    private Long id;
+
+    /**
      * Date of the transaction.
      * Format: "dd/MM/yyyy"
      */
@@ -53,6 +59,13 @@ public class TransactionDTO {
     private String category;
 
     /**
+     * True if a user-saved category override was applied during import.
+     * Not annotated with @CsvBind* — OpenCSV silently ignores unannotated fields,
+     * so scheduler CSV parsing is unaffected.
+     */
+    private Boolean hasOverride;
+
+    /**
      * Convert DTO to Entity.
      *
      * @return Transaction entity
@@ -64,6 +77,7 @@ public class TransactionDTO {
                 .amount(this.amount)
                 .currency(this.currency != null ? this.currency.toUpperCase() : "AUD")
                 .category(this.category)
+                .hasOverride(this.hasOverride)
                 .build();
     }
 
@@ -75,11 +89,13 @@ public class TransactionDTO {
      */
     public static TransactionDTO fromEntity(Transaction transaction) {
         return new TransactionDTO(
+                transaction.getId(),
                 transaction.getDate(),
                 transaction.getDescription(),
                 transaction.getAmount(),
                 transaction.getCurrency(),
-                transaction.getCategory()
+                transaction.getCategory(),
+                transaction.getHasOverride()
         );
     }
 }
