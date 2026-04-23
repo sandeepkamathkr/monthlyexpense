@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   # Replace with your Docker Hub username and image name
   repository: sandeepkamathkr/monthly-expense-frontend
-  tag: 1.2.3
+  tag: 1.2.4
   pullPolicy: Always
 
 service:

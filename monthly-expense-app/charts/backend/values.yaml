@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: sandeepkamathkr/monthly-expense-backend
-  tag: 1.3.4
+  tag: 1.3.5
   pullPolicy: Always
 
 service:
@@ -14,7 +14,7 @@ csvScheduler:
   enabled: true
   inputFolder: /app/csv-input
   defaultCurrency: AUD
-  intervalMs: 300000
+  intervalMs: 2500
 
 reprocessJob:
   enabled: false
