@@ -5,6 +5,9 @@ A full-stack web application for tracking and analyzing monthly expenses. This a
 ## Features
 
 - **Automated CSV Import**: Scheduler auto-imports CSV files from a year/month folder structure every 5 minutes
+- **Multi-Bank Import UI**: Upload bank-specific CSVs (CommBank, HSBC), preview and review parsed transactions before committing
+- **Learned Category Overrides**: Auto-applies your previous category choices to matching descriptions on every future import
+- **Import Failure Tracking**: Failed imports are surfaced in the UI with download and dismiss actions
 - **Transaction Management**: View and manage transaction records
 - **Expense Analysis**: Visualize spending patterns with charts and summaries
 - **Monthly Summaries**: View spending totals by month
@@ -16,7 +19,7 @@ A full-stack web application for tracking and analyzing monthly expenses. This a
 
 ## Technology Stack
 
-### Backend (v1.3.4)
+### Backend (v1.3.5)
 - Java 11
 - Spring Boot 2.7.14
 - Spring Data JPA
@@ -24,8 +27,9 @@ A full-stack web application for tracking and analyzing monthly expenses. This a
 - OpenCSV for CSV processing
 - ShedLock for distributed scheduler locking
 - Lombok
+- YAML-driven bank format configuration (zero-code to add a new bank)
 
-### Frontend (v1.2.3)
+### Frontend (v1.2.4)
 - React 18 with modern build system
 - Bootstrap 5
 - Chart.js for data visualization
@@ -158,33 +162,70 @@ docker-image-scripts/
 ./release.sh --backend-version 1.3.1 --frontend-version 1.2.1 --registry YOUR_USERNAME
 ```
 
-## CSV File Format
+## CSV File Formats
 
-The application expects CSV files with the following columns:
-- **Date**: Transaction date in yyyy-MM-dd format
-- **Description**: Description of the transaction
-- **Amount**: Transaction amount (numeric)
-- **Category**: Category of the transaction
+### Bank-Specific CSVs (Import UI)
 
-Example:
+Upload your raw bank export directly in the Import page. The format is auto-detected from the date column — no renaming or reformatting needed.
+
+| Bank | Date Format | Header | Notes |
+|------|-------------|--------|-------|
+| CommBank | `dd/MM/yyyy` | No | Amount column is signed (negative = debit) |
+| HSBC | `d MMM yyyy` | Yes | Separate debit/credit columns |
+
+**Adding a new bank** requires only a YAML entry in `application.yml` — no Java changes:
+
+```yaml
+bank:
+  formats:
+    - name: mybank
+      datePattern: "yyyy-MM-dd"
+      hasHeader: true
+      amountSigned: true
+      columns:
+        date: 0
+        amount: 2
+        description: 3
 ```
-Date,Description,Amount,Category
-2023-01-15,Grocery shopping,125.50,Groceries
-2023-01-20,Monthly rent,1200.00,Housing
-2023-01-25,Internet bill,65.00,Utilities
+
+### Standardised Internal Format (Scheduler)
+
+The scheduler reads CSV files in this fixed format (written by the Import UI after review):
+
 ```
+Date,Description,Amount,Currency,Category
+15/01/2026,COLES,45.50,AUD,Groceries
+20/01/2026,Monthly rent,1200.00,AUD,Rent
+```
+
+- **Date**: `dd/MM/yyyy`
+- **Currency**: ISO code (e.g. `AUD`, `USD`)
+- **Category**: must be one of the known category names (see `/api/transactions/categories`)
 
 ## API Endpoints
 
 The application provides the following REST API endpoints:
 
-- `GET /api/transactions`: Get all transactions
-- `GET /api/transactions/month?month={month}&year={year}`: Get transactions for a specific month and year
-- `GET /api/transactions/category/{category}`: Get transactions by category
-- `GET /api/transactions/total`: Get total amount of all transactions
-- `GET /api/transactions/monthly-totals?year={year}`: Get monthly totals for a specific year
-- `🆕 GET /api/transactions/category-totals?month={month}&year={year}`: Get category totals with optional month/year filtering
-- `DELETE /api/transactions/reset`: Reset all data
+### Dashboard & Query
+- `GET /api/transactions` — Get all transactions
+- `GET /api/transactions/month?month={month}&year={year}` — Get transactions for a specific month/year
+- `GET /api/transactions/category/{category}` — Get transactions by category
+- `GET /api/transactions/total` — Get total amount of all transactions
+- `GET /api/transactions/monthly-totals?year={year}` — Get monthly totals for a specific year
+- `GET /api/transactions/category-totals?month={month}&year={year}` — Get category totals with optional month/year filtering
+- `GET /api/transactions/primary-currency` — Get the primary currency in use
+- `DELETE /api/transactions/reset` — Reset all data
+
+### Import Pipeline (v1.3.5)
+- `POST /api/transactions/parse` — Upload raw bank CSV → returns parsed TransactionDTOs for review
+- `POST /api/transactions/stage` — Stage reviewed transactions as a standardised CSV for scheduler pickup
+- `GET /api/transactions/categories` — Returns all known category names for the review dropdowns
+- `PATCH /api/transactions/{id}/category` — Inline-update a single transaction's category + saves an override rule
+- `POST /api/transactions/category-overrides` — Bulk-save description→category override rules
+- `GET /api/transactions/month-count?month={m}&year={y}` — Count existing DB transactions for a month (conflict check)
+- `GET /api/transactions/import-failures` — List all recorded import failures
+- `GET /api/transactions/import-failures/{id}/download` — Download a `.csv.failed` file for fixing
+- `DELETE /api/transactions/import-failures/{id}` — Dismiss an import failure record
 
 ### Month Filtering Feature
 
@@ -223,7 +264,41 @@ For local development, H2 database is used:
 
 ## Version History
 
-### v1.3.4 / v1.2.3 (Latest) - April 2026
+### v1.3.5 / v1.2.4 (Latest) - April 2026
+
+**📂 Multi-Bank CSV Import UI:**
+- New **Import Page** for uploading raw bank-specific CSV exports (CommBank, HSBC supported out-of-the-box)
+- Bank format auto-detected from the date column pattern — no filename conventions required
+- Review step shows all parsed transactions with category dropdowns before committing
+- Bulk-select rows and apply a category to multiple transactions in one click
+- Exclude individual rows from the import
+- Staged CSVs dropped into the scheduler's year/month folder for pick-up within 5 minutes
+- Conflict detection warns if existing data for that month will be replaced
+
+**🧠 Learned Category Overrides:**
+- Every manual category change during review is saved as a `description → category` rule
+- On the next import, matching descriptions are pre-categorised with a bookmark icon
+- Rules stored per-user in the `category_overrides` DB table
+- Inline edit from the dashboard (`PATCH /{id}/category`) also saves a rule
+
+**⚠️ Failed Import Tracking:**
+- Import failures are recorded in the `import_failures` table with actionable error messages
+- The Import page surfaces outstanding failures in a collapsible panel
+- Download the `.csv.failed` file, fix it, and re-upload via the Import UI
+- Dismiss resolved failures from the UI
+
+**🏦 Zero-Code Bank Format Extension:**
+- Bank formats defined entirely in `application.yml` under `bank.formats[]`
+- Each entry declares: name, date pattern, header flag, amount-sign convention, column indices
+- Adding a new bank requires only a YAML entry — no Java changes
+
+**🔧 Config Format Migration:**
+- `application.properties` and `application-docker.properties` replaced with `application.yml` and `application-docker.yml`
+- All existing config keys preserved; YAML enables richer bank format blocks
+
+---
+
+### v1.3.4 / v1.2.3 - April 2026
 
 **🔒 ShedLock — Distributed Scheduler Locking:**
 - Added ShedLock to ensure only one replica runs the CSV scheduler at a time

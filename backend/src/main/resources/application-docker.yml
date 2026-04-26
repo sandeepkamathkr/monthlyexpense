@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://db:5432/monthly_expense_db
+    username: admin
+    password: password123
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 10
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql:
+    init:
+      mode: always
+
+cors:
+  allowed-origins: http://localhost:3000,http://localhost:80,http://localhost
+
+csv:
+  scheduler:
+    enabled: ${CSV_SCHEDULER_ENABLED:true}
+    input-folder: ${CSV_INPUT_FOLDER:}
+    default-currency: ${CSV_DEFAULT_CURRENCY:AUD}
+    interval-ms: ${CSV_SCHEDULER_INTERVAL_MS:5000}
+
+reprocess:
+  only: ${REPROCESS_ONLY:false}

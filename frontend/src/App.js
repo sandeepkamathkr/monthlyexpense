@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import './styles.css';
+import ImportPage from './components/ImportPage';
 
 // API base URL - change this to match your backend URL in production
 const API_BASE_URL = '/api/transactions';
@@ -529,11 +530,36 @@ const CategoryTotalsTable = ({categoryTotals, transactions, selectedMonth, selec
 };
 
 // Transactions Table Component
-const TransactionsTable = ({transactions}) => {
+const TransactionsTable = ({transactions, onCategoryChange}) => {
     const [filteredTransactions, setFilteredTransactions] = useState(transactions);
     const [descriptionFilter, setDescriptionFilter] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('');
     const [isFiltering, setIsFiltering] = useState(false);
+    const [categories, setCategories] = useState([]);
+    const [editingId, setEditingId] = useState(null);
+    const [pendingCategory, setPendingCategory] = useState('');
+
+    useEffect(() => {
+        axios.get(`${API_BASE_URL}/categories`)
+            .then(res => setCategories(res.data))
+            .catch(() => {});
+    }, []);
+
+    const startEdit = (id, current) => {
+        setEditingId(id);
+        setPendingCategory(current);
+    };
+
+    const commitCategoryEdit = async (id) => {
+        if (!pendingCategory) { setEditingId(null); return; }
+        try {
+            await axios.patch(`${API_BASE_URL}/${id}/category`, { category: pendingCategory });
+            if (onCategoryChange) onCategoryChange();
+        } catch (err) {
+            console.warn('Category update failed:', err);
+        }
+        setEditingId(null);
+    };
 
     // Update filtered transactions when props or filters change
     useEffect(() => {
@@ -672,7 +698,35 @@ const TransactionsTable = ({transactions}) => {
                                 <td>{formatDate(transaction.date)}</td>
                                 <td>{transaction.description}</td>
                                 <td>{formatCurrency(transaction.amount, transaction.currency)}</td>
-                                <td>{transaction.category}</td>
+                                <td>
+                                    <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
+                                        {transaction.hasOverride && editingId !== transaction.id && (
+                                            <i className="bi bi-bookmark-fill"
+                                               title="Saved rule applied"
+                                               style={{color: 'var(--accent)', fontSize: 12, flexShrink: 0}} />
+                                        )}
+                                        {editingId === transaction.id ? (
+                                            <select
+                                                className="form-select form-select-sm"
+                                                style={{fontSize: 12, minWidth: 140}}
+                                                value={pendingCategory}
+                                                onChange={e => setPendingCategory(e.target.value)}
+                                                onBlur={() => commitCategoryEdit(transaction.id)}
+                                                autoFocus
+                                            >
+                                                {categories.map(c => <option key={c}>{c}</option>)}
+                                            </select>
+                                        ) : (
+                                            <span
+                                                onClick={() => startEdit(transaction.id, transaction.category)}
+                                                style={{cursor: 'pointer'}}
+                                                title="Click to edit"
+                                            >
+                                                {transaction.category}
+                                            </span>
+                                        )}
+                                    </div>
+                                </td>
                             </tr>
                         ))
                     )}
@@ -1181,6 +1235,7 @@ const App = () => {
     });
     const [showHandles, setShowHandles] = useState(DEFAULT_LAYOUT.showHandles);
     const [tweaksVisible, setTweaksVisible] = useState(false);
+    const [showImport, setShowImport] = useState(false);
 
     // Load category totals based on selected month/year
     const loadCategoryTotals = async (month = null, year = null) => {
@@ -1298,11 +1353,19 @@ const App = () => {
 
     // Reset all data
     const handleReset = async () => {
-        if (window.confirm('Are you sure you want to reset all data? This action cannot be undone.')) {
+        const confirmed = window.confirm(
+            'Reset will:\n' +
+            '  • Delete ALL transactions from the database\n' +
+            '  • Re-queue all .csv.done files for reprocessing\n' +
+            '  • Re-queue all .csv.failed files for retry\n' +
+            '  • Clear all import failure records\n\n' +
+            'This cannot be undone. Continue?'
+        );
+        if (confirmed) {
             try {
                 await axios.delete(`${API_BASE_URL}/reset`);
-                alert('All data has been reset successfully.');
-                loadData(); // Reload data after reset
+                alert('Reset complete. All CSV files have been re-queued and will be processed within 5 minutes.');
+                loadData();
             } catch (error) {
                 console.error('Error resetting data:', error);
                 alert('Failed to reset data. Please try again.');
@@ -1331,6 +1394,10 @@ const App = () => {
         try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch {}
         return () => window.removeEventListener('message', onMsg);
     }, []);
+
+    if (showImport) {
+        return <ImportPage onBack={() => { setShowImport(false); loadData(); }} />;
+    }
 
     if (loading) {
         return (
@@ -1382,7 +1449,7 @@ const App = () => {
         transactions: {
             title: <span className="section-title"><i className="bi bi-list-ul"></i>All Transactions</span>,
             defaultExpanded: false,
-            body: <TransactionsTable transactions={transactions} />,
+            body: <TransactionsTable transactions={transactions} onCategoryChange={loadData} />,
         },
     };
 
@@ -1393,6 +1460,9 @@ const App = () => {
                 <div className="actions">
                     <button className="btn btn-outline-primary btn-sm me-2" onClick={loadData}>
                         <i className="bi bi-arrow-clockwise me-1"></i>Refresh
+                    </button>
+                    <button className="btn btn-outline-primary btn-sm me-2" onClick={() => setShowImport(true)}>
+                        <i className="bi bi-upload me-1"></i>Import
                     </button>
                     <button className="btn btn-outline-danger btn-sm" onClick={handleReset}>
                         <i className="bi bi-trash me-1"></i>Reset

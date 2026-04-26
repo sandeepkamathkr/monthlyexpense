@@ -1,0 +1,78 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/expense_db
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 10
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      mode: always
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+logging:
+  level:
+    org.springframework: INFO
+    com.expense.monthly: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:80,http://localhost}
+
+csv:
+  scheduler:
+    enabled: ${CSV_SCHEDULER_ENABLED:true}
+    input-folder: ${CSV_INPUT_FOLDER:./csv-input}
+    default-currency: ${CSV_DEFAULT_CURRENCY:AUD}
+    interval-ms: ${CSV_SCHEDULER_INTERVAL_MS:5000}
+
+reprocess:
+  only: ${REPROCESS_ONLY:false}
+
+bank:
+  formats:
+    - name: commbank
+      datePattern: "dd/MM/yyyy"
+      hasHeader: false
+      amountSigned: true
+      columns:
+        date: 0
+        amount: 1
+        description: 2
+    - name: hsbc
+      datePattern: "d MMM yyyy"
+      hasHeader: true
+      amountSigned: false
+      columns:
+        date: 0
+        description: 2
+        amount: 3

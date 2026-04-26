@@ -21,6 +21,8 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Override Spring Boot BOM: 1.18.38 supports JDK 21+ / JDK 25 -->
+        <lombok.version>1.18.38</lombok.version>
     </properties>
 
     <repositories>
@@ -190,6 +192,13 @@
                         <arg>-verbose</arg>
                         <arg>-Xlint:all,-options,-path</arg>
                     </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                     <testExcludes>
                         <testExclude>**/*Test.java</testExclude>
                     </testExcludes>
