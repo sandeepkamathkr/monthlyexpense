@@ -1,0 +1,78 @@
+# MCP Server Configuration
+server:
+  port: 8082
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: monthly-expense-mcp-server
+
+  # PostgreSQL Database configuration (KIND cluster via port-forward)
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/monthly_expense_db}
+    username: ${DATABASE_USER:postgres}
+    password: ${DATABASE_PASSWORD:4bTp9VmJ0D%}
+    driver-class-name: org.postgresql.Driver
+
+    # Connection pooling
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+# MCP Server specific configuration
+mcp:
+  server:
+    enabled: true
+
+    websocket:
+      path: /mcp
+      enabled: true
+      max-message-size: 1048576  # 1MB
+      session-timeout: 300000     # 5 minutes
+
+    http:
+      enabled: true
+      path: /api/mcp
+
+    auth:
+      enabled: false  # Set to true in production
+      header-name: X-MCP-API-Key
+      api-keys:
+        # Add your API keys here (for production)
+        # - "your-secret-api-key-1"
+        # - "your-secret-api-key-2"
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.expense.mcp: DEBUG
+    com.expense.monthly: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Actuator endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
