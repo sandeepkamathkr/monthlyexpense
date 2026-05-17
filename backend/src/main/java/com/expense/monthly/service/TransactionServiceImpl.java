@@ -36,6 +36,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final JdbcTemplate jdbcTemplate;
     private final CategoryOverrideService categoryOverrideService;
+    private final CsvWriteService csvWriteService;
 
     /**
      * {@inheritDoc}
@@ -92,7 +93,16 @@ public class TransactionServiceImpl implements TransactionService {
             }
 
             log.info("Parsed {} transactions from CSV and applied currency: {}", transactions.size(), currency);
-            return saveTransactions(transactions);
+
+            String absolutePath = file.getAbsolutePath();
+            List<Transaction> entities = transactions.stream()
+                    .map(dto -> {
+                        Transaction t = dto.toEntity();
+                        t.setSourceFile(absolutePath);
+                        return t;
+                    })
+                    .collect(Collectors.toList());
+            return transactionRepository.saveAll(entities);
         }
     }
 
@@ -102,7 +112,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public String getPrimaryCurrency() {
         log.info("Getting primary currency from existing transactions");
-        List<Transaction> transactions = transactionRepository.findAll();
+        List<Transaction> transactions = transactionRepository.findByExcludedFalse();
         if (transactions.isEmpty()) {
             return null;
         }
@@ -115,7 +125,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public List<Transaction> getAllTransactions() {
         log.info("Retrieving all transactions");
-        return transactionRepository.findAll();
+        return transactionRepository.findByExcludedFalse();
     }
 
     /**
@@ -124,7 +134,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public List<Transaction> getTransactionsByMonth(int month, int year) {
         log.info("Retrieving transactions for month: {}, year: {}", month, year);
-        return transactionRepository.findByMonthAndYear(month, year);
+        return transactionRepository.findByMonthAndYearAndExcludedFalse(month, year);
     }
 
     /**
@@ -133,7 +143,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public List<Transaction> getTransactionsByCategory(String category) {
         log.info("Retrieving transactions for category: {}", category);
-        return transactionRepository.findByCategoryIgnoreCase(category);
+        return transactionRepository.findByCategoryIgnoreCaseAndExcludedFalse(category);
     }
 
     /**
@@ -142,7 +152,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public List<Transaction> getTransactionsByDescription(String description) {
         log.info("Retrieving transactions containing description: {}", description);
-        return transactionRepository.findByDescriptionContainingIgnoreCase(description);
+        return transactionRepository.findByDescriptionContainingIgnoreCaseAndExcludedFalse(description);
     }
 
     /**
@@ -262,6 +272,32 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction t = transactionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + id));
         t.setCategory(category);
+        return transactionRepository.save(t);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public Transaction updateTransactionAmount(Long id, BigDecimal amount) {
+        Transaction t = transactionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + id));
+        csvWriteService.updateAmountInCsv(t, amount);
+        t.setAmount(amount);
+        return transactionRepository.save(t);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Transactional
+    public Transaction excludeTransaction(Long id) {
+        Transaction t = transactionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + id));
+        csvWriteService.removeRowFromCsv(t);
+        t.setExcluded(true);
         return transactionRepository.save(t);
     }
 

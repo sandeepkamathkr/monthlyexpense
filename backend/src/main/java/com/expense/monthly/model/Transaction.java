@@ -79,6 +79,12 @@ public class Transaction {
     @Column(name = "has_override")
     private Boolean hasOverride;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean excluded;
+
+    @Column(name = "source_file")
+    private String sourceFile;
+
     /**
      * Pre-persist hook to set month and year fields based on the date.
      */

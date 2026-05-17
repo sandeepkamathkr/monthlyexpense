@@ -15,74 +15,29 @@ import java.util.List;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
-    /**
-     * Find all transactions for a specific month and year.
-     *
-     * @param month Month (1-12)
-     * @param year Year
-     * @return List of transactions
-     */
     List<Transaction> findByMonthAndYear(int month, int year);
-
-    /**
-     * Find all transactions for a specific year.
-     *
-     * @param year Year
-     * @return List of transactions
-     */
     List<Transaction> findByYear(int year);
 
-    /**
-     * Delete all transactions for a specific month and year.
-     * Used during re-import to wipe existing data before writing the new file.
-     *
-     * @param month Month (1-12) — maps to the entity field {@code month} (column: transaction_month)
-     * @param year  Year         — maps to the entity field {@code year}  (column: transaction_year)
-     */
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteByMonthAndYear(int month, int year);
 
-    /**
-     * Find all transactions by category (case insensitive).
-     *
-     * @param category Category name
-     * @return List of transactions
-     */
     List<Transaction> findByCategoryIgnoreCase(String category);
-
-    /**
-     * Find all transactions containing the given description (case insensitive).
-     *
-     * @param description Description to search for
-     * @return List of transactions
-     */
     List<Transaction> findByDescriptionContainingIgnoreCase(String description);
 
-    /**
-     * Calculate the total amount of all transactions.
-     *
-     * @return Total amount
-     */
-    @Query("SELECT SUM(t.amount) FROM Transaction t")
+    // Excluded-false variants used by all read queries
+    List<Transaction> findByExcludedFalse();
+    List<Transaction> findByMonthAndYearAndExcludedFalse(int month, int year);
+    List<Transaction> findByYearAndExcludedFalse(int year);
+    List<Transaction> findByCategoryIgnoreCaseAndExcludedFalse(String category);
+    List<Transaction> findByDescriptionContainingIgnoreCaseAndExcludedFalse(String description);
+
+    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.excluded = false")
     BigDecimal calculateTotalAmount();
 
-    /**
-     * Calculate the total amount for a specific month and year.
-     *
-     * @param month Month (1-12)
-     * @param year Year
-     * @return Total amount for the month
-     */
-    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.month = ?1 AND t.year = ?2")
+    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.month = ?1 AND t.year = ?2 AND t.excluded = false")
     BigDecimal calculateMonthlyTotal(int month, int year);
 
-    /**
-     * Calculate the total amount by category (case insensitive).
-     *
-     * @param category Category name
-     * @return Total amount for the category
-     */
-    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE LOWER(t.category) = LOWER(?1)")
+    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE LOWER(t.category) = LOWER(?1) AND t.excluded = false")
     BigDecimal calculateTotalByCategory(String category);
 }

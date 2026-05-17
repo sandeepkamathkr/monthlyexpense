@@ -313,6 +313,20 @@ public class TransactionController {
         return ResponseEntity.ok(TransactionDTO.fromEntity(updated));
     }
 
+    @PatchMapping("/{id}/amount")
+    public ResponseEntity<TransactionDTO> updateAmount(
+            @PathVariable Long id,
+            @RequestBody Map<String, BigDecimal> body) {
+        Transaction updated = transactionService.updateTransactionAmount(id, body.get("amount"));
+        return ResponseEntity.ok(TransactionDTO.fromEntity(updated));
+    }
+
+    @PatchMapping("/{id}/exclude")
+    public ResponseEntity<TransactionDTO> excludeTransaction(@PathVariable Long id) {
+        Transaction updated = transactionService.excludeTransaction(id);
+        return ResponseEntity.ok(TransactionDTO.fromEntity(updated));
+    }
+
     /**
      * Batch save of description→category overrides (called after import queue).
      */

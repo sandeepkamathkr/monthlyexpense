@@ -65,6 +65,8 @@ public class TransactionDTO {
      */
     private Boolean hasOverride;
 
+    private boolean excluded;
+
     /**
      * Convert DTO to Entity.
      *
@@ -95,7 +97,8 @@ public class TransactionDTO {
                 transaction.getAmount(),
                 transaction.getCurrency(),
                 transaction.getCategory(),
-                transaction.getHasOverride()
+                transaction.getHasOverride(),
+                transaction.isExcluded()
         );
     }
 }

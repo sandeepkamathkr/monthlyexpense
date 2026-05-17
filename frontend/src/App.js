@@ -538,6 +538,8 @@ const TransactionsTable = ({transactions, onCategoryChange}) => {
     const [categories, setCategories] = useState([]);
     const [editingId, setEditingId] = useState(null);
     const [pendingCategory, setPendingCategory] = useState('');
+    const [editingAmountId, setEditingAmountId] = useState(null);
+    const [pendingAmount, setPendingAmount] = useState('');
 
     useEffect(() => {
         axios.get(`${API_BASE_URL}/categories`)
@@ -559,6 +561,32 @@ const TransactionsTable = ({transactions, onCategoryChange}) => {
             console.warn('Category update failed:', err);
         }
         setEditingId(null);
+    };
+
+    const startAmountEdit = (id, current) => {
+        setEditingAmountId(id);
+        setPendingAmount(String(current));
+    };
+
+    const commitAmountEdit = async (id) => {
+        const val = parseFloat(pendingAmount);
+        if (isNaN(val)) { setEditingAmountId(null); return; }
+        try {
+            await axios.patch(`${API_BASE_URL}/${id}/amount`, { amount: val });
+            if (onCategoryChange) onCategoryChange();
+        } catch (err) {
+            console.warn('Amount update failed:', err);
+        }
+        setEditingAmountId(null);
+    };
+
+    const excludeTransaction = async (id) => {
+        try {
+            await axios.patch(`${API_BASE_URL}/${id}/exclude`);
+            if (onCategoryChange) onCategoryChange();
+        } catch (err) {
+            console.warn('Exclude failed:', err);
+        }
     };
 
     // Update filtered transactions when props or filters change
@@ -676,12 +704,13 @@ const TransactionsTable = ({transactions, onCategoryChange}) => {
                         <th>Description</th>
                         <th>Amount</th>
                         <th>Category</th>
+                        <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
                     {filteredTransactions.length === 0 ? (
                         <tr>
-                            <td colSpan="4" className="text-center">
+                            <td colSpan="5" className="text-center">
                                 {isFiltering ? (
                                     <div>
                                         <i className="bi bi-filter-circle-fill fs-3 d-block mb-2 text-muted"></i>
@@ -697,7 +726,24 @@ const TransactionsTable = ({transactions, onCategoryChange}) => {
                             <tr key={index}>
                                 <td>{formatDate(transaction.date)}</td>
                                 <td>{transaction.description}</td>
-                                <td>{formatCurrency(transaction.amount, transaction.currency)}</td>
+                                <td onClick={() => startAmountEdit(transaction.id, transaction.amount)}
+                                    style={{cursor: 'pointer'}}>
+                                    {editingAmountId === transaction.id ? (
+                                        <input type="number" step="0.01"
+                                               className="form-control form-control-sm"
+                                               style={{width: 100}}
+                                               value={pendingAmount}
+                                               onChange={e => setPendingAmount(e.target.value)}
+                                               onBlur={() => commitAmountEdit(transaction.id)}
+                                               onKeyDown={e => {
+                                                   if (e.key === 'Enter') commitAmountEdit(transaction.id);
+                                                   if (e.key === 'Escape') setEditingAmountId(null);
+                                               }}
+                                               autoFocus />
+                                    ) : (
+                                        formatCurrency(transaction.amount, transaction.currency)
+                                    )}
+                                </td>
                                 <td>
                                     <div style={{display: 'flex', alignItems: 'center', gap: 4}}>
                                         {transaction.hasOverride && editingId !== transaction.id && (
@@ -726,6 +772,13 @@ const TransactionsTable = ({transactions, onCategoryChange}) => {
                                             </span>
                                         )}
                                     </div>
+                                </td>
+                                <td>
+                                    <button className="btn btn-sm btn-outline-danger"
+                                            title="Exclude transaction"
+                                            onClick={() => excludeTransaction(transaction.id)}>
+                                        <i className="bi bi-eye-slash"></i>
+                                    </button>
                                 </td>
                             </tr>
                         ))

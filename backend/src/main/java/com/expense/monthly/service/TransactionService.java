@@ -139,4 +139,22 @@ public interface TransactionService {
      */
     Transaction updateTransactionCategory(Long id, String category);
 
+    /**
+     * Updates the amount of a single transaction and writes the change back to the source CSV.
+     *
+     * @param id     transaction id
+     * @param amount new amount
+     * @return updated Transaction entity
+     */
+    Transaction updateTransactionAmount(Long id, BigDecimal amount);
+
+    /**
+     * Marks a transaction as excluded so it is hidden from all queries and totals,
+     * and removes its row from the source CSV.
+     *
+     * @param id transaction id
+     * @return updated Transaction entity
+     */
+    Transaction excludeTransaction(Long id);
+
 }
