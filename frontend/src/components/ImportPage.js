@@ -78,6 +78,8 @@ const ImportPage = ({ onBack }) => {
     const [filterSrc, setFilterSrc] = useState('');
     const [selectedIds, setSelectedIds] = useState(new Set());
     const [bulkCategory, setBulkCategory] = useState('');
+    const [editingAmountId, setEditingAmountId] = useState(null);
+    const [editAmountDraft, setEditAmountDraft] = useState('');
 
     // ── Step 3 state ────────────────────────────────────────────────────────
     const [monthCounts, setMonthCounts] = useState({}); // "YYYY/MMM" → count
@@ -292,6 +294,15 @@ const ImportPage = ({ onBack }) => {
                     description: r.description,
                     category: r.category,
                 }))).catch(err => console.warn('Override save failed (non-fatal):', err));
+            }
+
+            // Save permanently excluded descriptions so re-importing the same CSV skips them
+            const excludedDescriptions = allRows
+                .filter(r => r._excluded)
+                .map(r => r.description);
+            if (excludedDescriptions.length > 0) {
+                axios.post(`${API}/exclusion-rules`, excludedDescriptions)
+                    .catch(err => console.warn('Exclusion save failed (non-fatal):', err));
             }
         } catch (err) {
             const msg = err.response?.data?.message || err.response?.data || err.message;
@@ -672,7 +683,44 @@ const ImportPage = ({ onBack }) => {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '6px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 500 }}>
-                                                    {formatAmt(row.amount, row.currency || currency)}
+                                                    {editingAmountId === row._id ? (
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            autoFocus
+                                                            value={editAmountDraft}
+                                                            style={{ width: 90, textAlign: 'right', fontSize: 12 }}
+                                                            className="form-control form-control-sm"
+                                                            onChange={e => setEditAmountDraft(e.target.value)}
+                                                            onBlur={() => {
+                                                                const v = parseFloat(editAmountDraft);
+                                                                if (!isNaN(v) && v > 0) {
+                                                                    setAllRows(prev => prev.map(r =>
+                                                                        r._id === row._id ? { ...r, amount: v } : r
+                                                                    ));
+                                                                }
+                                                                setEditingAmountId(null);
+                                                            }}
+                                                            onKeyDown={e => {
+                                                                if (e.key === 'Enter') e.target.blur();
+                                                                if (e.key === 'Escape') setEditingAmountId(null);
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <span
+                                                            style={{ cursor: row._excluded ? 'default' : 'pointer' }}
+                                                            title={row._excluded ? undefined : 'Click to edit'}
+                                                            onClick={() => {
+                                                                if (!row._excluded) {
+                                                                    setEditingAmountId(row._id);
+                                                                    setEditAmountDraft(String(row.amount));
+                                                                }
+                                                            }}
+                                                        >
+                                                            {formatAmt(row.amount, row.currency || currency)}
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 {srcFiles.length > 1 && (
                                                     <td style={{ padding: '6px 12px', color: 'var(--muted)', fontSize: 11, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

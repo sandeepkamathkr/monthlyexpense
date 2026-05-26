@@ -10,6 +10,7 @@ import com.expense.monthly.parser.TransactionStagingService;
 import com.expense.monthly.repository.ImportFailureRepository;
 import com.expense.monthly.scheduler.CsvFileManager;
 import com.expense.monthly.service.CategoryOverrideService;
+import com.expense.monthly.service.ExclusionRuleService;
 import com.expense.monthly.service.ImportFailureService;
 import com.expense.monthly.service.TransactionService;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,7 @@ public class TransactionController {
     private final ImportFailureRepository importFailureRepository;
     private final CsvFileManager csvFileManager;
     private final CategoryOverrideService categoryOverrideService;
+    private final ExclusionRuleService exclusionRuleService;
 
     // -------------------------------------------------------------------------
     // Existing endpoints
@@ -321,6 +323,17 @@ public class TransactionController {
             @RequestBody List<CategoryOverrideDTO> overrides) {
         log.info("Saving {} category override(s)", overrides == null ? 0 : overrides.size());
         categoryOverrideService.saveOverrides(overrides);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Batch save of permanently excluded transaction descriptions (called after import queue).
+     * On re-import of the same CSV, these rows are filtered out during parsing.
+     */
+    @PostMapping("/exclusion-rules")
+    public ResponseEntity<Void> saveExclusionRules(@RequestBody List<String> descriptions) {
+        log.info("Saving {} exclusion rule(s)", descriptions == null ? 0 : descriptions.size());
+        exclusionRuleService.saveExclusions(descriptions);
         return ResponseEntity.noContent().build();
     }
 }
