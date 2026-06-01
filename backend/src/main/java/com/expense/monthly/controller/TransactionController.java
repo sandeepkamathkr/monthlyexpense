@@ -2,7 +2,6 @@ package com.expense.monthly.controller;
 
 import com.expense.monthly.dto.CategoryOverrideDTO;
 import com.expense.monthly.dto.TransactionDTO;
-import com.expense.monthly.model.Category;
 import com.expense.monthly.model.ImportFailure;
 import com.expense.monthly.model.Transaction;
 import com.expense.monthly.parser.BankCsvParser;
@@ -10,6 +9,8 @@ import com.expense.monthly.parser.TransactionStagingService;
 import com.expense.monthly.repository.ImportFailureRepository;
 import com.expense.monthly.scheduler.CsvFileManager;
 import com.expense.monthly.service.CategoryOverrideService;
+import com.expense.monthly.service.CustomCategoryService;
+import com.expense.monthly.service.ExclusionRuleService;
 import com.expense.monthly.service.ImportFailureService;
 import com.expense.monthly.service.TransactionService;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,8 @@ public class TransactionController {
     private final ImportFailureRepository importFailureRepository;
     private final CsvFileManager csvFileManager;
     private final CategoryOverrideService categoryOverrideService;
+    private final ExclusionRuleService exclusionRuleService;
+    private final CustomCategoryService customCategoryService;
 
     // -------------------------------------------------------------------------
     // Existing endpoints
@@ -291,12 +294,21 @@ public class TransactionController {
     // -------------------------------------------------------------------------
 
     /**
-     * Returns all known categories: the canonical list merged with any extra
-     * categories that exist in the DB (e.g. categories added before this list existed).
+     * Returns all known categories: the canonical list merged with any user-added custom categories.
      */
     @GetMapping("/categories")
     public ResponseEntity<List<String>> getCategories() {
-        return ResponseEntity.ok(Category.ALL);
+        return ResponseEntity.ok(customCategoryService.getAllCategories());
+    }
+
+    /**
+     * Persists new custom category names (called after import queue for any user-typed categories).
+     */
+    @PostMapping("/categories")
+    public ResponseEntity<Void> saveCustomCategories(@RequestBody List<String> names) {
+        log.info("Saving {} custom category name(s)", names == null ? 0 : names.size());
+        customCategoryService.saveCategories(names);
+        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -321,6 +333,17 @@ public class TransactionController {
             @RequestBody List<CategoryOverrideDTO> overrides) {
         log.info("Saving {} category override(s)", overrides == null ? 0 : overrides.size());
         categoryOverrideService.saveOverrides(overrides);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Batch save of exclusion rules (called after import queue for all excluded rows).
+     * Excluded transactions will be filtered out automatically on the next import of the same CSV.
+     */
+    @PostMapping("/exclusion-rules")
+    public ResponseEntity<Void> saveExclusionRules(@RequestBody List<String> descriptions) {
+        log.info("Saving {} exclusion rule(s)", descriptions == null ? 0 : descriptions.size());
+        exclusionRuleService.saveExclusions(descriptions);
         return ResponseEntity.noContent().build();
     }
 }

@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose *)",
+      "Bash(docker build *)",
+      "Bash(docker ps)",
+      "Bash(docker logs *)",
+      "Bash(curl -s *)",
+      "Bash(find . *)",
+      "Bash(mvn test)",
+      "Bash(mvn clean package *)",
+      "Bash(npm ci *)",
+      "Bash(npm run *)"
+    ],
+    "deny": [
+      "Read(.env)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "agent",
+            "if": "Bash(git push *)",
+            "prompt": "A git push was just performed. Your job is to review what changed and update README.md to keep it accurate.\n\nSteps:\n1. Run: git log --oneline -5\n2. Run: git diff HEAD~1 HEAD --name-only\n3. For any significant backend, frontend, or config files changed, run: git diff HEAD~1 HEAD -- <file> to understand the change\n4. Read the current README.md\n5. Update only the README.md sections that are affected by the changes (e.g. API Endpoints, Architecture, Features, Configuration, CSV Format, Development Commands). Do not rewrite the whole file — make targeted updates.\n6. If README.md was modified, commit it: git add README.md && git commit -m 'docs: update README to reflect latest changes'\n\nSkip the update if the push only touched README.md itself, images, or other non-functional files.",
+            "timeout": 120,
+            "statusMessage": "Reviewing push and updating README.md..."
+          }
+        ]
+      }
+    ]
+  }
+}

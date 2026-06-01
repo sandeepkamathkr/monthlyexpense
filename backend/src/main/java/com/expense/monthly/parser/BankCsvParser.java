@@ -2,6 +2,7 @@ package com.expense.monthly.parser;
 
 import com.expense.monthly.dto.TransactionDTO;
 import com.expense.monthly.service.CategoryOverrideService;
+import com.expense.monthly.service.ExclusionRuleService;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvException;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Parses raw bank CSV files into TransactionDTOs.
@@ -38,6 +40,7 @@ public class BankCsvParser {
     private final BankFormatsProperties bankFormatsProperties;
     private final TransactionCategorizer categorizer;
     private final CategoryOverrideService categoryOverrideService;
+    private final ExclusionRuleService exclusionRuleService;
 
     /**
      * Parses a raw bank CSV upload into a list of TransactionDTOs.
@@ -78,6 +81,15 @@ public class BankCsvParser {
                 // Re-throw with row context so the caller can show an actionable error
                 throw new IllegalArgumentException("Row " + (i + 1) + ": " + e.getMessage(), e);
             }
+        }
+
+        // Filter out transactions the user has permanently excluded in a previous import
+        Set<String> exclusions = exclusionRuleService.getAllExclusionsAsSet();
+        int beforeExclusion = result.size();
+        result.removeIf(dto -> exclusions.contains(dto.getDescription().toLowerCase().trim()));
+        int excluded = beforeExclusion - result.size();
+        if (excluded > 0) {
+            log.info("Filtered {} previously excluded transaction(s) from {}", excluded, file.getOriginalFilename());
         }
 
         // Apply saved category overrides so the review UI pre-selects the user's choices

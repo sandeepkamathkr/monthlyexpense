@@ -73,6 +73,11 @@ const ImportPage = ({ onBack }) => {
 
     // ── Step 2 state ────────────────────────────────────────────────────────
     const [allRows, setAllRows] = useState([]); // TransactionDTO + { _id, _excluded, _srcFile }
+    const [editingAmountId, setEditingAmountId] = useState(null);
+    const [pendingAmount, setPendingAmount] = useState('');
+    const [addingCategoryId, setAddingCategoryId] = useState(null);
+    const [pendingCategoryName, setPendingCategoryName] = useState('');
+    const [newCategories, setNewCategories] = useState(new Set());
     const [filterDesc, setFilterDesc] = useState('');
     const [filterCat, setFilterCat] = useState('');
     const [filterSrc, setFilterSrc] = useState('');
@@ -205,6 +210,31 @@ const ImportPage = ({ onBack }) => {
     const toggleExclude = (id) =>
         setAllRows(prev => prev.map(r => r._id === id ? { ...r, _excluded: !r._excluded } : r));
 
+    const startAmountEdit = (id, current) => {
+        setEditingAmountId(id);
+        setPendingAmount(String(current));
+    };
+
+    const commitAmountEdit = (id) => {
+        const val = parseFloat(pendingAmount);
+        if (!isNaN(val) && val > 0) {
+            setAllRows(prev => prev.map(r => r._id === id ? { ...r, amount: val } : r));
+        }
+        setEditingAmountId(null);
+    };
+
+    const confirmNewCategory = (id) => {
+        const name = pendingCategoryName.trim();
+        if (!name) { setAddingCategoryId(null); return; }
+        if (!allCategories.includes(name)) {
+            setAllCategories(prev => [...prev, name]);
+            setNewCategories(prev => new Set([...prev, name]));
+        }
+        setAllRows(prev => prev.map(r => r._id === id ? { ...r, category: name } : r));
+        setAddingCategoryId(null);
+        setPendingCategoryName('');
+    };
+
     // ── Step 2 → Step 3: check conflicts ──────────────────────────────────────
     const activeRows = allRows.filter(r => !r._excluded);
 
@@ -292,6 +322,21 @@ const ImportPage = ({ onBack }) => {
                     description: r.description,
                     category: r.category,
                 }))).catch(err => console.warn('Override save failed (non-fatal):', err));
+            }
+
+            // Save exclusion rules so re-importing the same CSV skips these transactions (best-effort)
+            const excludedDescriptions = allRows
+                .filter(r => r._excluded)
+                .map(r => r.description);
+            if (excludedDescriptions.length > 0) {
+                axios.post(`${API}/exclusion-rules`, excludedDescriptions)
+                    .catch(err => console.warn('Exclusion rule save failed (non-fatal):', err));
+            }
+
+            // Save any user-typed new categories permanently (best-effort)
+            if (newCategories.size > 0) {
+                axios.post(`${API}/categories`, [...newCategories])
+                    .catch(err => console.warn('Custom category save failed (non-fatal):', err));
             }
         } catch (err) {
             const msg = err.response?.data?.message || err.response?.data || err.message;
@@ -672,7 +717,31 @@ const ImportPage = ({ onBack }) => {
                                                     </span>
                                                 </td>
                                                 <td style={{ padding: '6px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 500 }}>
-                                                    {formatAmt(row.amount, row.currency || currency)}
+                                                    {editingAmountId === row._id ? (
+                                                        <input
+                                                            type="number"
+                                                            step="0.01"
+                                                            min="0.01"
+                                                            className="form-control form-control-sm"
+                                                            style={{ width: 100, display: 'inline-block', textAlign: 'right' }}
+                                                            value={pendingAmount}
+                                                            onChange={e => setPendingAmount(e.target.value)}
+                                                            onBlur={() => commitAmountEdit(row._id)}
+                                                            onKeyDown={e => {
+                                                                if (e.key === 'Enter') commitAmountEdit(row._id);
+                                                                if (e.key === 'Escape') setEditingAmountId(null);
+                                                            }}
+                                                            autoFocus
+                                                        />
+                                                    ) : (
+                                                        <span
+                                                            onClick={() => !row._excluded && startAmountEdit(row._id, row.amount)}
+                                                            style={{ cursor: row._excluded ? 'default' : 'pointer' }}
+                                                            title={row._excluded ? undefined : 'Click to edit amount'}
+                                                        >
+                                                            {formatAmt(row.amount, row.currency || currency)}
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 {srcFiles.length > 1 && (
                                                     <td style={{ padding: '6px 12px', color: 'var(--muted)', fontSize: 11, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -687,15 +756,41 @@ const ImportPage = ({ onBack }) => {
                                                         {row.category !== row._originalCategory && (
                                                             <i className="bi bi-pencil-fill" title="Will be saved as rule" style={{ color: '#f59e0b', fontSize: 11, flexShrink: 0 }} />
                                                         )}
-                                                        <select
-                                                            className="form-select form-select-sm"
-                                                            style={{ fontSize: 12 }}
-                                                            value={row.category}
-                                                            onChange={e => updateCategory(row._id, e.target.value)}
-                                                            disabled={row._excluded}
-                                                        >
-                                                            {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
-                                                        </select>
+                                                        {addingCategoryId === row._id ? (
+                                                            <input
+                                                                type="text"
+                                                                className="form-control form-control-sm"
+                                                                style={{ fontSize: 12, minWidth: 130 }}
+                                                                placeholder="New category name"
+                                                                value={pendingCategoryName}
+                                                                onChange={e => setPendingCategoryName(e.target.value)}
+                                                                onBlur={() => confirmNewCategory(row._id)}
+                                                                onKeyDown={e => {
+                                                                    if (e.key === 'Enter') confirmNewCategory(row._id);
+                                                                    if (e.key === 'Escape') setAddingCategoryId(null);
+                                                                }}
+                                                                autoFocus
+                                                            />
+                                                        ) : (
+                                                            <select
+                                                                className="form-select form-select-sm"
+                                                                style={{ fontSize: 12 }}
+                                                                value={row.category}
+                                                                onChange={e => {
+                                                                    if (e.target.value === '__new__') {
+                                                                        setAddingCategoryId(row._id);
+                                                                        setPendingCategoryName('');
+                                                                    } else {
+                                                                        updateCategory(row._id, e.target.value);
+                                                                    }
+                                                                }}
+                                                                disabled={row._excluded}
+                                                            >
+                                                                {allCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                                                                <option disabled>──────────</option>
+                                                                <option value="__new__">＋ Add new category...</option>
+                                                            </select>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td style={{ padding: '6px 8px', textAlign: 'center' }}>
